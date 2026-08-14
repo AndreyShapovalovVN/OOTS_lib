@@ -1,6 +1,5 @@
 import base64
 import logging
-import os
 from dataclasses import is_dataclass
 
 from pyRegRep4 import deep_get
@@ -58,6 +57,18 @@ class MakeEvidence:
         self.data: MainBase | None = None
         self.title = ""
         self.description: list[str] = []
+
+    def _edm_exception(self, code: str, message: str, detail: str) -> EDMException:
+        """Створює EDMException з контекстом цього повідомлення."""
+        return EDMException(
+            redis=self.redis,
+            queue=None,
+            key=None,
+            message_id=str(self.message_id),
+            code=code,
+            message=message,
+            detail=detail,
+        )
 
     @property
     def if_preview(self):
@@ -152,11 +163,7 @@ class MakeEvidence:
         try:
             documents = await self.data.generate_data()
         except Exception as e:
-            raise EDMException(
-                redis=self.redis,
-                queue=None,
-                key=None,
-                message_id=str(self.message_id),
+            raise self._edm_exception(
                 code="EDM:ERR:0004",
                 message="Інформацію про людину не знайдено",
                 detail=str(e),
@@ -198,11 +205,7 @@ class MakeEvidence:
 
             else:
                 _logger.error(f"Невідомий тип контенту: {content_type}")
-                raise EDMException(
-                    redis=self.redis,
-                    queue=None,
-                    key=None,
-                    message_id=str(self.message_id),
+                raise self._edm_exception(
                     code="EDM:ERR:0006",
                     message="Невідомий тип контенту",
                     detail=f"Невідомий тип контенту: {content_type}",

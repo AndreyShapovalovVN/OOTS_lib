@@ -109,6 +109,16 @@ class UseRedisAsync:
             return key
         return f"{self._redis_prefix}{key}"
 
+    def _resolve_key(self, key: str | None) -> str:
+        """Валідує ключ і додає до нього префікс.
+
+        Raises:
+            KeyIsNone: Якщо ключ є None
+        """
+        if key is None:
+            raise KeyIsNone()
+        return self._prefixed_key(key)
+
     async def get_from_redis(self, key: str | None) -> dict | list | None:
         """Отримує та десеріалізує JSON дані з Redis за ключем.
 
@@ -118,10 +128,7 @@ class UseRedisAsync:
         Returns:
             Десеріалізований словник або None, якщо ключ не існує або дані невалідні
         """
-        if key is None:
-            raise KeyIsNone()
-
-        redis_key = self._prefixed_key(key)
+        redis_key = self._resolve_key(key)
         data = await self._redis_client.get(redis_key)
         if data is None:
             return None
@@ -142,10 +149,7 @@ class UseRedisAsync:
         Returns:
             Сирі дані або None, якщо ключ не існує
         """
-        if key is None:
-            raise KeyIsNone
-
-        redis_key = self._prefixed_key(key)
+        redis_key = self._resolve_key(key)
         data = await self._redis_client.get(redis_key)
         _logger.debug(f"Отримано сирі дані з Redis для ключа {redis_key}: {data}")
         return data if isinstance(data, bytes) else None
@@ -159,10 +163,7 @@ class UseRedisAsync:
             key: Ключ Redis для зберігання даних
             data: Дані для серіалізації та зберігання
         """
-        if key is None:
-            raise KeyIsNone()
-
-        redis_key = self._prefixed_key(key)
+        redis_key = self._resolve_key(key)
         await self._redis_client.set(redis_key, json.dumps(data, default=str), ex=TTL)
         _logger.debug(f"Збережено дані до Redis для ключа {redis_key}: {data}")
 
@@ -173,14 +174,11 @@ class UseRedisAsync:
             key: Ключ Redis для зберігання сирих даних
             data: Сирі дані для зберігання
         """
-        if key is None:
-            raise KeyIsNone()
+        redis_key = self._resolve_key(key)
         if data is None:
             raise ValueError("Сирі дані не можуть бути None")
         if not isinstance(data, bytes):
             raise ValueError("Сирі дані повинні бути типу bytes")
-
-        redis_key = self._prefixed_key(key)
 
         await self._redis_client.set(redis_key, data, ex=TTL)
         _logger.debug(f"Збережено сирі дані до Redis для ключа {redis_key}: {data}")
@@ -206,10 +204,7 @@ class UseRedisAsync:
         Raises:
             KeyIsNone: Якщо ключ є None
         """
-        if key is None:
-            raise KeyIsNone()
-
-        redis_key = self._prefixed_key(key)
+        redis_key = self._resolve_key(key)
         # Зберігаємо як JSON boolean: true/false
         flag_value = json.dumps(value)
         await self._redis_client.set(redis_key, flag_value, ex=TTL)
@@ -228,10 +223,7 @@ class UseRedisAsync:
         Raises:
             KeyIsNone: Якщо ключ є None
         """
-        if key is None:
-            raise KeyIsNone()
-
-        redis_key = self._prefixed_key(key)
+        redis_key = self._resolve_key(key)
         data = await self._redis_client.get(redis_key)
 
         if data is None:
@@ -262,10 +254,7 @@ class UseRedisAsync:
         queue_name: str | None = None,
         return_tuple_as_string: bool = False,
     ) -> str | None:
-        if queue_name is None:
-            raise KeyIsNone()
-
-        redis_queue = self._prefixed_key(queue_name)
+        redis_queue = self._resolve_key(queue_name)
 
         try:
             result = await self._redis_client.brpop(
@@ -357,9 +346,6 @@ class UseRedisAsync:
         Args:
             key: Ключ для видалення
         """
-        if key is None:
-            raise ValueError("Ключ не може бути None")
-
-        redis_key = self._prefixed_key(key)
+        redis_key = self._resolve_key(key)
         await self._redis_client.delete(redis_key)
         _logger.debug(f"Видалено ключ з Redis: {redis_key}")
