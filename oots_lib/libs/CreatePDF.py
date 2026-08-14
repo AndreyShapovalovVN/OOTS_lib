@@ -5,7 +5,7 @@ from collections.abc import Iterable
 
 from lxml import etree
 
-from oots_lib.lib.xml_safety import safe_fromstring, safe_parse
+from oots_lib.libs.xml_safety import safe_fromstring, safe_parse
 
 try:
     from weasyprint import CSS, HTML  # type: ignore

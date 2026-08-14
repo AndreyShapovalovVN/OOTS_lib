@@ -5,9 +5,9 @@ from typing import Any
 
 from lxml import etree
 
-from oots_lib.lib.NS import NS
-from oots_lib.lib.redis_serde import load_model_from_redis, save_model_to_redis
-from oots_lib.lib.xml_safety import safe_fromstring
+from oots_lib.libs.NS import NS
+from oots_lib.libs.redis_serde import load_model_from_redis, save_model_to_redis
+from oots_lib.libs.xml_safety import safe_fromstring
 from oots_lib.models.Base import Base, MainBase
 from oots_lib.import_env import import_env
 

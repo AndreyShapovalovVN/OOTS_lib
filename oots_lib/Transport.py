@@ -5,9 +5,9 @@ from abc import ABC, abstractmethod
 from XRoad import RedisCache, Transport, XClient
 from XRoad.plugins import UXPHistoryPlugin
 
-from oots_lib.lib.exception import EDMException
-from oots_lib.lib.toLogger import ToLogger
-from oots_lib.lib.UseRedis import get_redis_client
+from oots_lib.libs.exception import EDMException
+from oots_lib.libs.toLogger import ToLogger
+from oots_lib.libs.UseRedis import get_redis_client
 from oots_lib.import_env import import_env
 
 

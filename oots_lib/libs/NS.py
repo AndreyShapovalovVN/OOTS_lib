@@ -2,7 +2,7 @@ from typing import Any
 
 from lxml import etree
 
-from oots_lib.lib.xml_utils import clean_attrib, set_element_text
+from oots_lib.libs.xml_utils import clean_attrib, set_element_text
 
 
 class NS:
