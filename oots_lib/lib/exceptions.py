@@ -1,6 +1,7 @@
 from lxml import etree
 
 from oots_lib.lib.NS import NS
+from oots_lib.lib.xml_utils import clean_attrib
 
 
 class EDMException(NS, Exception):
@@ -31,6 +32,10 @@ class EDMException(NS, Exception):
         text = self._format_text()
         Exception.__init__(self, text)
 
+    @staticmethod
+    def _clean_attrib(attrib: dict[str, object]) -> dict[str, str]:
+        return clean_attrib(attrib)
+
     def _format_text(self) -> str:
         parts = []
         if self.code:
@@ -44,16 +49,17 @@ class EDMException(NS, Exception):
     @property
     def xml(self) -> etree._Element:  # type: ignore[override]
         if self._xml is None:
+            attrib = {
+                self._tname("xsi", "type"): self.e_type,
+                "severity": self.severity,
+                "message": self.message,
+                "detail": self.detail,
+                "code": self.code,
+            }
             self._xml = self._element(
                 "rs",
                 "Exception",
-                attrib={
-                    self._tname("xsi", "type"): self.e_type,
-                    "severity": self.severity,
-                    "message": self.message,
-                    "detail": self.detail,
-                    "code": self.code,
-                },
+                attrib=self._clean_attrib(attrib),
             )
         return self._xml
 

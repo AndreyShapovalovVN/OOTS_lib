@@ -25,6 +25,9 @@ _redis_instance: Optional["UseRedisAsync"] = None
 class KeyIsNone(ValueError):
     """Виключення для випадків, коли ключ Redis є None."""
 
+    def __init__(self, message: str = "Ключ Redis не може бути None"):
+        super().__init__(message)
+
 
 class RedisDataError(ValueError):
     """Дані у Redis мають некоректний формат і не можуть бути десеріалізовані."""
@@ -137,7 +140,7 @@ class UseRedisAsync:
             KeyIsNone: Якщо ключ є None
         """
         if key is None:
-            raise KeyIsNone()
+            raise KeyIsNone("Ключ Redis не може бути None")
         return self._prefixed_key(key)
 
     async def get_from_redis(self, key: str | None) -> dict | list | None:
