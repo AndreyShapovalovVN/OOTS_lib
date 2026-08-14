@@ -10,6 +10,11 @@ _logger = logging.getLogger(__name__)
 BASE_URL = import_env("EXCHANGE_LOGGER_URI")
 API_KEY = import_env("EXCHANGE_LOGGER_API_KEY")
 
+if not BASE_URL.startswith("https://"):
+    _logger.warning(
+        "EXCHANGE_LOGGER_URI не використовує HTTPS: API-ключ передається в незашифрованому вигляді"
+    )
+
 
 class LoggerServiceError(RuntimeError):
     """Не вдалося передати журнал транзакцій до сервісу журналювання."""

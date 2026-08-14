@@ -4,6 +4,7 @@ import json
 import logging
 import os
 from typing import Any, Optional
+from urllib.parse import urlsplit, urlunsplit
 
 import redis
 import redis.asyncio as Redis
@@ -28,6 +29,22 @@ class KeyIsNone(ValueError):
 
 class RedisDataError(ValueError):
     """Дані у Redis мають некоректний формат і не можуть бути десеріалізовані."""
+
+
+def mask_redis_url(url: str) -> str:
+    """Приховує облікові дані у Redis URL для безпечного журналювання."""
+    try:
+        parts = urlsplit(url)
+    except ValueError:
+        return "<redis-url>"
+    if not parts.hostname:
+        return "<redis-url>"
+    netloc = parts.hostname
+    if parts.port:
+        netloc = f"{netloc}:{parts.port}"
+    if parts.username or parts.password:
+        netloc = f"***:***@{netloc}"
+    return urlunsplit((parts.scheme, netloc, parts.path, "", ""))
 
 
 def get_redis_client() -> "UseRedisAsync":
@@ -91,7 +108,7 @@ class UseRedisAsync:
                 self._redis_client = redis_url
             else:
                 url = redis_url if isinstance(redis_url, str) else REDIS_URL
-                _logger.debug(f"URL підключення Redis: {url}")
+                _logger.debug(f"URL підключення Redis: {mask_redis_url(url)}")
                 self._redis_client = Redis.from_url(
                     url,
                     protocol=3,
@@ -140,7 +157,7 @@ class UseRedisAsync:
             raise RedisDataError(
                 f"Не вдалося розшифрувати JSON для ключа {redis_key}: {e}"
             ) from e
-        _logger.debug(f"Отримано дані з Redis для ключа {redis_key}: {data}")
+        _logger.debug(f"Отримано дані з Redis для ключа {redis_key}")
         return data
 
     async def get_raw_from_redis(self, key: str | None) -> bytes | None:
@@ -157,7 +174,10 @@ class UseRedisAsync:
 
         redis_key = self._prefixed_key(key)
         data = await self._redis_client.get(redis_key)
-        _logger.debug(f"Отримано сирі дані з Redis для ключа {redis_key}: {data}")
+        _logger.debug(
+            f"Отримано сирі дані з Redis для ключа {redis_key}, "
+            f"розмір: {len(data) if data else 0} байт"
+        )
         return data if isinstance(data, bytes) else None
 
     async def save_to_redis(
@@ -174,7 +194,7 @@ class UseRedisAsync:
 
         redis_key = self._prefixed_key(key)
         await self._redis_client.set(redis_key, json.dumps(data, default=str), ex=TTL)
-        _logger.debug(f"Збережено дані до Redis для ключа {redis_key}: {data}")
+        _logger.debug(f"Збережено дані до Redis для ключа {redis_key}")
 
     async def save_raw_to_redis(self, key: str | None, data: bytes | None) -> None:
         """Зберігає сирі bytes дані до Redis з TTL.
@@ -193,7 +213,10 @@ class UseRedisAsync:
         redis_key = self._prefixed_key(key)
 
         await self._redis_client.set(redis_key, data, ex=TTL)
-        _logger.debug(f"Збережено сирі дані до Redis для ключа {redis_key}: {data}")
+        _logger.debug(
+            f"Збережено сирі дані до Redis для ключа {redis_key}, "
+            f"розмір: {len(data)} байт"
+        )
 
     async def push_to_queue(self, queue_name: str, message: str) -> None:
         """Поміщає повідомлення до Redis-черги list.
