@@ -5,7 +5,6 @@ import os
 from oots_lib.lib.UseRedis import UseRedisAsync
 from oots_lib.redis_keys import Keys
 
-
 _logger = logging.getLogger(__name__)
 
 KEYS = Keys()
@@ -64,7 +63,7 @@ class EDMException(Exception):
                 # Виключення не можна кидати з конструктора помилки: інакше воно
                 # підмінить первинну причину. Тому лишень фіксуємо та логуємо.
                 self.reporting_error = e
-                _logger.exception(f"Не вдалося опублікувати помилку {self.code}: {e}")
+                _logger.exception(f"Не вдалося опублікувати помилку {self.code}")
             return
 
         task = loop.create_task(self.report())

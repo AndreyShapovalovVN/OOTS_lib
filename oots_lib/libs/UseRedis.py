@@ -8,6 +8,7 @@ from typing import Any, Optional
 import redis
 import redis.asyncio as Redis
 from redis.maint_notifications import MaintNotificationsConfig
+
 from oots_lib.import_env import import_env
 
 _logger = logging.getLogger(__name__)

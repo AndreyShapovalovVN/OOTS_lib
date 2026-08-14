@@ -1,16 +1,14 @@
 import logging
-import os
 from abc import ABC, abstractmethod
 from typing import NoReturn
 
 from XRoad import RedisCache, Transport, XClient
 from XRoad.plugins import UXPHistoryPlugin
 
+from oots_lib.import_env import import_env
 from oots_lib.lib.exception import EDMException, TransportError
 from oots_lib.lib.toLogger import ToLogger
 from oots_lib.lib.UseRedis import get_redis_client
-from oots_lib.import_env import import_env
-
 
 _logger = logging.getLogger(__name__)
 
@@ -43,7 +41,7 @@ class SOAPTransport(ABC):
                 plugins=[self.history, ]
             )
         except Exception as e:
-            _logger.exception(f"Помилка створення XClient: {e}")
+            _logger.exception("Помилка створення XClient")
             self.send_error_message(
                 code="EDM:ERR:0006",  # NOSONAR
                 message="Сталася помилка при створенні з'єднення до Трембіти",
@@ -80,7 +78,6 @@ class SOAPTransport(ABC):
 
         raise TransportError(f"[{code}] {message}: {detail}") from cause
 
-
     @abstractmethod
     def parsing_response(self, responce: dict) -> list[dict]:
         ...
@@ -98,7 +95,7 @@ class SOAPTransport(ABC):
         try:
             response = self.client.request(**request)
         except Exception as e:
-            _logger.exception(f"Помилка виконання запиту до Трембіти: {e}")
+            _logger.exception("Помилка виконання запиту до Трембіти")
             self.send_error_message(
                 code="EDM:ERR:0006",
                 message="Сталася помилка при виконанні запиту до Сервісу даних",
@@ -108,7 +105,7 @@ class SOAPTransport(ABC):
 
         try:
             result = response["body"]
-        except Exception as e:
+        except (KeyError, IndexError, TypeError) as e:
             self.send_error_message(
                 code="EDM:ERR:0006",
                 message="Відповідь від Сервісу даних має некоректну структуру",
@@ -138,5 +135,5 @@ class SOAPTransport(ABC):
         _logger.debug(f"Дані журналу транзакції: {self.to_logger.payload}")
         try:
             self.to_logger.send_to_logger()
-        except Exception as e:
-            _logger.exception(f"Не вдалося надіслати журнал транзакції: {e}")
+        except Exception:
+            _logger.exception("Не вдалося надіслати журнал транзакції")

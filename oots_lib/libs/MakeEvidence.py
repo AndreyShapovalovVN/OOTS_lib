@@ -6,7 +6,14 @@ from dataclasses import is_dataclass
 from pyRegRep4 import deep_get
 from pyRegRep4.RIMParsing import Parsing
 
-from oots_lib.lib.EvidanceMetadata import Distribution, EMetadata, IsAbout, IsConformantTo, IssuingAuthority
+from oots_lib.import_env import import_env
+from oots_lib.lib.EvidanceMetadata import (
+    Distribution,
+    EMetadata,
+    IsAbout,
+    IsConformantTo,
+    IssuingAuthority,
+)
 from oots_lib.lib.exception import EDMException
 from oots_lib.lib.toLogger import ToLogger
 from oots_lib.lib.UseRedis import UseRedisAsync as Redis
@@ -22,8 +29,6 @@ from oots_lib.models.ResponseEvidences import (
     save_evidences_to_redis,
 )
 from oots_lib.redis_keys import Keys
-from oots_lib.import_env import import_env
-
 
 _logger = logging.getLogger(__name__)
 
