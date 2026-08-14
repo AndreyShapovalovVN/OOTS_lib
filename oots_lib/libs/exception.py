@@ -2,7 +2,7 @@ import asyncio
 import logging
 import os
 
-from oots_lib.lib.UseRedis import UseRedisAsync
+from oots_lib.libs.UseRedis import UseRedisAsync
 from oots_lib.redis_keys import Keys
 
 _logger = logging.getLogger(__name__)

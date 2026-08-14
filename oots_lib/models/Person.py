@@ -6,7 +6,7 @@ from typing import Any
 
 from lxml import etree
 
-from oots_lib.lib.NS import NS
+from oots_lib.libs.NS import NS
 from oots_lib.libs.xml_safety import safe_fromstring
 from oots_lib.models.Base import Base, MainBase
 from oots_lib.import_env import import_env

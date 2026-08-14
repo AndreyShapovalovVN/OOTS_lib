@@ -7,7 +7,7 @@ from dataclasses import asdict, dataclass
 
 from lxml import etree
 
-from oots_lib.lib.CreatePDF import generate_pdf_from_xslt
+from oots_lib.libs.CreatePDF import generate_pdf_from_xslt
 
 
 @dataclass

@@ -3,7 +3,7 @@ import uuid
 
 from lxml import etree
 
-from oots_lib.lib.NS import NS
+from oots_lib.libs.NS import NS
 
 
 _logger = logging.getLogger(__name__)

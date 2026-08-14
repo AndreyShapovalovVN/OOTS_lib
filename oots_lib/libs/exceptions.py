@@ -2,7 +2,7 @@ from typing import Optional
 
 from lxml import etree
 
-from oots_lib.lib.NS import NS
+from oots_lib.libs.NS import NS
 
 
 class EDMException(NS, Exception):
