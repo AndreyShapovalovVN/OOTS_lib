@@ -1,6 +1,6 @@
 from dataclasses import asdict, dataclass
 
-from oots_lib.libs.redis_serde import load_model_from_redis, save_model_to_redis
+from oots_lib.lib.redis_serde import load_model_from_redis, save_model_to_redis
 
 
 @dataclass

@@ -6,16 +6,16 @@ from pyRegRep4 import deep_get
 from pyRegRep4.RIMParsing import Parsing
 
 from oots_lib.import_env import import_env
-from oots_lib.libs.EvidanceMetadata import (
+from oots_lib.lib.EvidanceMetadata import (
     Distribution,
     EMetadata,
     IsAbout,
     IsConformantTo,
     IssuingAuthority,
 )
-from oots_lib.libs.exception import EDMException
-from oots_lib.libs.toLogger import ToLogger
-from oots_lib.libs.UseRedis import UseRedisAsync as Redis
+from oots_lib.lib.exception import EDMException
+from oots_lib.lib.toLogger import ToLogger
+from oots_lib.lib.UseRedis import UseRedisAsync as Redis
 from oots_lib.models.Base import MainBase
 from oots_lib.models.Person import Person, get_person_from_redis
 from oots_lib.models.RequestEDM import get_edm_request_from_redis

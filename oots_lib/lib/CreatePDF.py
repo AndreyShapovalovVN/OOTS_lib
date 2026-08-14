@@ -5,7 +5,7 @@ from collections.abc import Iterable
 
 from lxml import etree
 
-from oots_lib.libs.xml_safety import safe_fromstring, safe_parse
+from oots_lib.lib.xml_safety import safe_fromstring, safe_parse
 
 try:
     from weasyprint import CSS, HTML  # type: ignore
@@ -33,7 +33,8 @@ def generate_pdf_from_xslt(
     """
     if HTML is None or CSS is None:
         raise ModuleNotFoundError(
-            "weasyprint is required for PDF generation. Install the optional dependency to use generate_pdf_from_xslt()."
+            "weasyprint is required for PDF generation. "
+            "Install the optional dependency to use generate_pdf_from_xslt()."
         )
 
     # Крок 1: Завантаження та виконання XSLT-трансформації
