@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "oots-lib"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "httpx>=0.28.1",
+    "lxml>=6.1.1",
+    "pyrefly>=0.60.0",
+    "pyregrep>=14",
+    "pyxroad>=1.5.10",
+]
+
+[tool.setuptools.packages.find]
+include = ["oots_lib*", "oots_lib.*"]
