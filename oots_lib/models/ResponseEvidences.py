@@ -5,7 +5,6 @@ from typing import Any
 
 from oots_lib.lib.redis_serde import load_model_from_redis, save_model_to_redis
 
-
 # Дозволені значення classificationNode.
 # За потреби можна розширити без зміни логіки моделі.
 ALLOWED_CLASSIFICATION_NODES = [
@@ -35,8 +34,8 @@ class Description:
 
 @dataclass
 class Classification:
-    classificationNode: str    # NOSONAR
-    classificationScheme: str = 'urn:fdc:oots:classification:edm'    # NOSONAR
+    classificationNode: str  # NOSONAR
+    classificationScheme: str = 'urn:fdc:oots:classification:edm'  # NOSONAR
     id: str = field(default_factory=_generate_identifier)
 
     def __post_init__(self):
@@ -65,8 +64,8 @@ class ExtrinsicObjectType:
     - то що
     """
     classification: Classification
-    EvidenceMetadata: str    # NOSONAR
-    RepositoryItemRef: RepositoryItemRef    # NOSONAR
+    EvidenceMetadata: str  # NOSONAR
+    RepositoryItemRef: RepositoryItemRef  # NOSONAR
     content_type: str | None = None
     content: Any | None = None
     encoding: str | None = None
@@ -81,7 +80,7 @@ class RegistryPackageType:
     Містить кілька представлень (ExtrinsicObjectType) одного й того ж доказу
     у різних форматах, але з єдиними метаданими.
     """
-    RegistryPackage: list[ExtrinsicObjectType]   # NOSONAR
+    RegistryPackage: list[ExtrinsicObjectType]  # NOSONAR
     id: str = field(default_factory=_generate_identifier)
     permit: bool = False
 
@@ -97,9 +96,9 @@ class Evidences:
     - Унікальний ідентифікатор відповіді
     """
     title: str
-    PreviewDescription: list[Description]    # NOSONAR
+    PreviewDescription: list[Description]  # NOSONAR
     preview: bool
-    evidences: list[RegistryPackageType]   # NOSONAR
+    evidences: list[RegistryPackageType]  # NOSONAR
 
 
 async def save_evidences_to_redis(redis_client, key: str, evidences: Evidences) -> None:
