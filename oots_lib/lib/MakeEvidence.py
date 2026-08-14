@@ -1,6 +1,5 @@
 import base64
 import logging
-import os
 from dataclasses import is_dataclass
 
 from pyRegRep4 import deep_get

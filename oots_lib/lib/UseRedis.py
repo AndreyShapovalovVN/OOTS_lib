@@ -2,7 +2,6 @@
 import inspect
 import json
 import logging
-import os
 from typing import Any, Optional
 from urllib.parse import urlsplit, urlunsplit
 

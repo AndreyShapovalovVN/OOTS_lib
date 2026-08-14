@@ -5,7 +5,6 @@ from lxml import etree
 
 from oots_lib.lib.NS import NS
 
-
 _logger = logging.getLogger(__name__)
 
 __all__ = [
