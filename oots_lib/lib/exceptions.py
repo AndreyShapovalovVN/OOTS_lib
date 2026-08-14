@@ -1,3 +1,5 @@
+from typing import Any
+
 from lxml import etree
 
 from oots_lib.lib.NS import NS
@@ -33,7 +35,7 @@ class EDMException(NS, Exception):
         Exception.__init__(self, text)
 
     @staticmethod
-    def _clean_attrib(attrib: dict[str, object]) -> dict[str, str]:
+    def _clean_attrib(attrib: dict[Any, Any]) -> dict[Any, str]:
         return clean_attrib(attrib)
 
     def _format_text(self) -> str:
