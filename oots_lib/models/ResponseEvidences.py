@@ -3,7 +3,6 @@ import uuid
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
-
 # Дозволені значення classificationNode.
 # За потреби можна розширити без зміни логіки моделі.
 ALLOWED_CLASSIFICATION_NODES = [

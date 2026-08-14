@@ -1,15 +1,13 @@
 import datetime
 import logging
-import os
 from dataclasses import dataclass, field
 from typing import Any
 
 from lxml import etree
 
+from oots_lib.import_env import import_env
 from oots_lib.lib.NS import NS
 from oots_lib.models.Base import Base, MainBase
-from oots_lib.import_env import import_env
-
 
 _logger = logging.getLogger(__name__)
 

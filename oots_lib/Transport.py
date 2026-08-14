@@ -1,15 +1,13 @@
 import logging
-import os
 from abc import ABC, abstractmethod
 
 from XRoad import RedisCache, Transport, XClient
 from XRoad.plugins import UXPHistoryPlugin
 
+from oots_lib.import_env import import_env
 from oots_lib.lib.exception import EDMException
 from oots_lib.lib.toLogger import ToLogger
 from oots_lib.lib.UseRedis import get_redis_client
-from oots_lib.import_env import import_env
-
 
 _logger = logging.getLogger(__name__)
 
