@@ -217,6 +217,52 @@ async def test_disconnect_is_safe_without_close_methods(fake_redis_client):
     await wrapper.disconnect()
 
 
+async def test_disconnect_awaits_async_close(fake_redis_client):
+    wrapper = wrapper_with(fake_redis_client)
+
+    await wrapper.disconnect()
+
+    assert fake_redis_client.closed is True
+
+
+async def test_disconnect_supports_sync_close_and_swallows_errors():
+    class SyncClose:
+        def __init__(self, error: Exception | None = None):
+            self.calls = 0
+            self.error = error
+
+        def close(self):
+            self.calls += 1
+            if self.error is not None:
+                raise self.error
+
+    client = SyncClose()
+    wrapper = wrapper_with(FakeAsyncRedisClient())
+    wrapper._redis_client = cast("Any", client)
+    await wrapper.disconnect()
+    assert client.calls == 1
+
+    failing = SyncClose(RuntimeError("boom"))
+    wrapper._redis_client = cast("Any", failing)
+    await wrapper.disconnect()
+    assert failing.calls == 1
+
+
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        ("redis://user:secret@cache.local:6379/0", "redis://***:***@cache.local:6379/0"),
+        ("redis://cache.local:6379/0", "redis://cache.local:6379/0"),
+        ("redis://cache.local", "redis://cache.local"),
+        ("redis://:6379", "<redis-url>"),
+        ("not-a-url", "<redis-url>"),
+        ("redis://[unclosed-ipv6", "<redis-url>"),
+    ],
+)
+def test_mask_redis_url_hides_credentials(url, expected):
+    assert use_redis.mask_redis_url(url) == expected
+
+
 async def test_async_context_manager_returns_self(fake_redis_client):
     wrapper = wrapper_with(fake_redis_client)
 

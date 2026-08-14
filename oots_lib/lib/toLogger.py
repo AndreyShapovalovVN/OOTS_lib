@@ -1,15 +1,19 @@
 import logging
-import os
 from typing import Any
 
 import httpx
-from oots_lib.import_env import import_env
 
+from oots_lib.import_env import import_env
 
 _logger = logging.getLogger(__name__)
 
 BASE_URL = import_env("EXCHANGE_LOGGER_URI")
 API_KEY = import_env("EXCHANGE_LOGGER_API_KEY")
+
+if not BASE_URL.startswith("https://"):
+    _logger.warning(
+        "EXCHANGE_LOGGER_URI не використовує HTTPS: API-ключ передається в незашифрованому вигляді"
+    )
 
 
 class ToLogger:

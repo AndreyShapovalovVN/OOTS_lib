@@ -5,6 +5,8 @@ from collections.abc import Iterable
 
 from lxml import etree
 
+from oots_lib.lib.xml_safety import safe_fromstring, safe_parse
+
 try:
     from weasyprint import CSS, HTML  # type: ignore
 except ModuleNotFoundError:  # pragma: no cover - optional dependency
@@ -31,7 +33,8 @@ def generate_pdf_from_xslt(
     """
     if HTML is None or CSS is None:
         raise ModuleNotFoundError(
-            "weasyprint is required for PDF generation. Install the optional dependency to use generate_pdf_from_xslt()."
+            "weasyprint is required for PDF generation. "
+            "Install the optional dependency to use generate_pdf_from_xslt()."
         )
 
     # Крок 1: Завантаження та виконання XSLT-трансформації
@@ -46,10 +49,10 @@ def generate_pdf_from_xslt(
 
     xml = re.sub(r"<\?xml [^>]*\?>\s*", '', rdf, count=1)
     xml = xml.strip()
-    xml_tree = etree.fromstring(xml)
+    xml_tree = safe_fromstring(xml)
 
     # Завантаження XSLT-таблиці стилів
-    xslt_root = etree.parse(xslt_file)
+    xslt_root = safe_parse(xslt_file)
     transform = etree.XSLT(
         xslt_root,
         access_control=etree.XSLTAccessControl.DENY_ALL,  # type: ignore[attr-defined]
