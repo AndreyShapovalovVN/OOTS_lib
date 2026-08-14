@@ -2,8 +2,8 @@ import logging
 from typing import Any
 
 import httpx
-from oots_lib.import_env import import_env
 
+from oots_lib.import_env import import_env
 
 _logger = logging.getLogger(__name__)
 
@@ -14,6 +14,10 @@ if not BASE_URL.startswith("https://"):
     _logger.warning(
         "EXCHANGE_LOGGER_URI не використовує HTTPS: API-ключ передається в незашифрованому вигляді"
     )
+
+
+class LoggerServiceError(RuntimeError):
+    """Не вдалося передати журнал транзакцій до сервісу журналювання."""
 
 
 class ToLogger:
@@ -29,6 +33,11 @@ class ToLogger:
         return self
 
     def send_to_logger(self):
+        """Надсилає журнал транзакцій до сервісу журналювання.
+
+        Raises:
+            LoggerServiceError: Якщо запит не вдався або сервіс повернув помилку
+        """
         _logger.debug("Запускаємо процес обміну з журналом...")
         _logger.debug(self.payload)
 
@@ -41,8 +50,12 @@ class ToLogger:
                 r = client.post(
                     f"{BASE_URL}/logs/trembita", headers=headers, json=self.payload
                 )
-            except Exception as e:
-                _logger.exception(f"Помилка надсилання журналу: {e}")
-                return
+            except httpx.HTTPError as e:
+                raise LoggerServiceError(f"Помилка надсилання журналу: {e}") from e
+
             _logger.debug(f"Відповідь сервісу журналювання: {r.status_code}, {r.text}")
+            if r.is_error:
+                raise LoggerServiceError(
+                    f"Сервіс журналювання повернув {r.status_code}: {r.text}"
+                )
         _logger.debug("Обмін із журналом завершено")
