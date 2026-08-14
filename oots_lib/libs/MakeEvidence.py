@@ -63,6 +63,11 @@ class MakeEvidence:
     def if_preview(self):
         _logger.debug(f"Перевірка прапора preview для повідомлення {self.message_id}")
 
+        if self.request is None:
+            raise ValueError(
+                f"Запит для повідомлення {self.message_id} не зчитаний: спершу викличте read_data()"
+            )
+
         request: dict = self.request.serialize()
         preview: bool = deep_get(request, 'doc', 'PossibilityForPreview', default=False)
 
@@ -75,10 +80,40 @@ class MakeEvidence:
         return pr
 
     async def read_data(self):
-        request = await get_edm_request_from_redis(self.redis, KEYS.get_request_edm(self.message_id))
+        """Зчитує вхідні дані повідомлення з Redis.
+
+        Raises:
+            EDMException: Якщо запит EDM або дані особи відсутні у Redis
+        """
+        request_key = KEYS.get_request_edm(self.message_id)
+        request = await get_edm_request_from_redis(self.redis, request_key)
+        if request is None:
+            raise self._not_found(
+                message="Запит EDM не знайдено",
+                detail=f"У Redis відсутній запит EDM за ключем {request_key}",
+            )
         self.request = Parsing(request.content)
-        self.person = await get_person_from_redis(self.redis, KEYS.get_request_person(self.message_id))
+
+        person_key = KEYS.get_request_person(self.message_id)
+        self.person = await get_person_from_redis(self.redis, person_key)
+        if self.person is None:
+            raise self._not_found(
+                message="Інформацію про людину не знайдено",
+                detail=f"У Redis відсутні дані особи за ключем {person_key}",
+            )
+
         self.as4 = await self.redis.get_from_redis(KEYS.get_request_as4(self.message_id))
+
+    def _not_found(self, message: str, detail: str) -> EDMException:
+        return EDMException(
+            redis=self.redis,
+            queue=None,
+            key=None,
+            message_id=str(self.message_id),
+            code="EDM:ERR:0004",
+            message=message,
+            detail=detail,
+        )
 
     async def load_data_to_redis(self):
         """
@@ -102,9 +137,15 @@ class MakeEvidence:
             _logger.debug(f"Повідомлення {self.message_id} потребує preview, обробка відкладена")
 
     def generate_metadata(self, main_evidence: bool = True):
-        assert self.person is not None, "person must be set before generate_metadata"
+        if self.person is None:
+            raise ValueError(
+                f"Дані особи для повідомлення {self.message_id} не зчитані: спершу викличте read_data()"
+            )
         person_tree = self.person.xml_tree
-        assert person_tree is not None, "person.xml_tree must not be None"
+        if person_tree is None:
+            raise ValueError(
+                f"XML особи для повідомлення {self.message_id} не сформовано"
+            )
 
         distribution = Distribution(self.request_content_type)
         conformantTo = IsConformantTo(self.CONFORMANT_TO_URL)     # NOSONAR
@@ -149,21 +190,34 @@ class MakeEvidence:
 
     async def transform_data(self):
 
+        if self.data is None:
+            raise ValueError(
+                f"Джерело даних для повідомлення {self.message_id} не встановлено: "
+                "задайте self.data перед transform_data()"
+            )
+
         try:
             documents = await self.data.generate_data()
         except Exception as e:
-            raise EDMException(
-                redis=self.redis,
-                queue=None,
-                key=None,
-                message_id=str(self.message_id),
-                code="EDM:ERR:0004",
+            raise self._not_found(
                 message="Інформацію про людину не знайдено",
                 detail=str(e),
             ) from e
 
         content_type = self.request_content_type
         _logger.info(f"Тип контенту: {content_type}")
+
+        if not content_type:
+            _logger.error("Тип контенту у запиті не вказаний")
+            raise EDMException(
+                redis=self.redis,
+                queue=None,
+                key=None,
+                message_id=str(self.message_id),
+                code="EDM:ERR:0003",
+                message="Тип контенту у запиті не вказаний",
+                detail="У запиті відсутній sdg:DistributedAs/sdg:Format",
+            )
 
         evidences = []
 

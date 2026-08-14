@@ -12,6 +12,10 @@ BASE_URL = import_env("EXCHANGE_LOGGER_URI")
 API_KEY = import_env("EXCHANGE_LOGGER_API_KEY")
 
 
+class LoggerServiceError(RuntimeError):
+    """Не вдалося передати журнал транзакцій до сервісу журналювання."""
+
+
 class ToLogger:
     def __init__(self, conversation_id: str):
         self.payload: dict[str, Any] = {
@@ -25,6 +29,11 @@ class ToLogger:
         return self
 
     def send_to_logger(self):
+        """Надсилає журнал транзакцій до сервісу журналювання.
+
+        Raises:
+            LoggerServiceError: Якщо запит не вдався або сервіс повернув помилку
+        """
         _logger.debug("Запускаємо процес обміну з журналом...")
         _logger.debug(self.payload)
 
@@ -37,8 +46,12 @@ class ToLogger:
                 r = client.post(
                     f"{BASE_URL}/logs/trembita", headers=headers, json=self.payload
                 )
-            except Exception as e:
-                _logger.exception(f"Помилка надсилання журналу: {e}")
-                return
+            except httpx.HTTPError as e:
+                raise LoggerServiceError(f"Помилка надсилання журналу: {e}") from e
+
             _logger.debug(f"Відповідь сервісу журналювання: {r.status_code}, {r.text}")
+            if r.is_error:
+                raise LoggerServiceError(
+                    f"Сервіс журналювання повернув {r.status_code}: {r.text}"
+                )
         _logger.debug("Обмін із журналом завершено")

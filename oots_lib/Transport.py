@@ -1,11 +1,12 @@
 import logging
 import os
 from abc import ABC, abstractmethod
+from typing import NoReturn
 
 from XRoad import RedisCache, Transport, XClient
 from XRoad.plugins import UXPHistoryPlugin
 
-from oots_lib.lib.exception import EDMException
+from oots_lib.lib.exception import EDMException, TransportError
 from oots_lib.lib.toLogger import ToLogger
 from oots_lib.lib.UseRedis import get_redis_client
 from oots_lib.import_env import import_env
@@ -34,6 +35,7 @@ class SOAPTransport(ABC):
         transport = Transport(operation_timeout=60 * 5, cache=cache)
         self.history = UXPHistoryPlugin()
 
+        self.client = None
         try:
             self.client = XClient(
                 TREMBITA_URL, client=TREMBITA_CLIENT_ID, service=self.service,
@@ -46,13 +48,26 @@ class SOAPTransport(ABC):
                 code="EDM:ERR:0006",  # NOSONAR
                 message="Сталася помилка при створенні з'єднення до Трембіти",
                 detail=f"Сталася помилка при створенні з'єднення до Трембіти: {e}",
+                cause=e,
             )
 
         _logger.info(f"XClient успішно створений: {self.client}")
 
-    def send_error_message(self, code: str, message: str, detail: str) -> None:
+    def send_error_message(
+        self,
+        code: str,
+        message: str,
+        detail: str,
+        cause: BaseException | None = None,
+    ) -> NoReturn:
+        """Сигналізує про помилку транспорту виключенням.
+
+        При `if_send_error` помилка додатково публікується до Redis та черги
+        через :class:`EDMException`, інакше кидається :class:`TransportError`.
+        Метод завжди кидає виключення, щоб помилка не залишалась непоміченою.
+        """
+        _logger.error(f"Помилка: code={code}, message={message}, detail={detail}")
         if self.if_send_error:
-            _logger.error(f"Помилка: code={code}, message={message}, detail={detail}")
             raise EDMException(
                 redis=self.redis,
                 queue=None,
@@ -61,7 +76,9 @@ class SOAPTransport(ABC):
                 code=code,
                 message=message,
                 detail=detail,
-            )
+            ) from cause
+
+        raise TransportError(f"[{code}] {message}: {detail}") from cause
 
 
     @abstractmethod
@@ -71,6 +88,13 @@ class SOAPTransport(ABC):
     def response(self, request: dict) -> list[dict]:
 
         _logger.info(f"Запит до сервісу: {self.service}")
+        if self.client is None:
+            self.send_error_message(
+                code="EDM:ERR:0006",
+                message="З'єднання до Трембіти не встановлено",
+                detail=f"XClient для сервісу {self.service} не створений",
+            )
+
         try:
             response = self.client.request(**request)
         except Exception as e:
@@ -79,6 +103,7 @@ class SOAPTransport(ABC):
                 code="EDM:ERR:0006",
                 message="Сталася помилка при виконанні запиту до Сервісу даних",
                 detail=f"Сталася помилка при виконанні запиту до Сервісу даних: {e}",
+                cause=e,
             )
 
         try:
@@ -88,6 +113,7 @@ class SOAPTransport(ABC):
                 code="EDM:ERR:0006",
                 message="Відповідь від Сервісу даних має некоректну структуру",
                 detail=f"Не вдалося отримати body.GetDocumentsByPersonResult: {e}",
+                cause=e,
             )
 
         self._logging_trembita_transaction()
