@@ -1,6 +1,5 @@
 import base64
 import logging
-import os
 from dataclasses import is_dataclass
 
 from pyRegRep4 import deep_get
@@ -64,6 +63,18 @@ class MakeEvidence:
         self.title = ""
         self.description: list[str] = []
 
+    def _edm_exception(self, code: str, message: str, detail: str) -> EDMException:
+        """Створює EDMException з контекстом цього повідомлення."""
+        return EDMException(
+            redis=self.redis,
+            queue=None,
+            key=None,
+            message_id=str(self.message_id),
+            code=code,
+            message=message,
+            detail=detail,
+        )
+
     @property
     def if_preview(self):
         _logger.debug(f"Перевірка прапора preview для повідомлення {self.message_id}")
@@ -110,14 +121,8 @@ class MakeEvidence:
         self.as4 = await self.redis.get_from_redis(KEYS.get_request_as4(self.message_id))
 
     def _not_found(self, message: str, detail: str) -> EDMException:
-        return EDMException(
-            redis=self.redis,
-            queue=None,
-            key=None,
-            message_id=str(self.message_id),
-            code="EDM:ERR:0004",
-            message=message,
-            detail=detail,
+        return self._edm_exception(
+            code="EDM:ERR:0004", message=message, detail=detail
         )
 
     async def load_data_to_redis(self):
@@ -214,11 +219,7 @@ class MakeEvidence:
 
         if not content_type:
             _logger.error("Тип контенту у запиті не вказаний")
-            raise EDMException(
-                redis=self.redis,
-                queue=None,
-                key=None,
-                message_id=str(self.message_id),
+            raise self._edm_exception(
                 code="EDM:ERR:0003",
                 message="Тип контенту у запиті не вказаний",
                 detail="У запиті відсутній sdg:DistributedAs/sdg:Format",
@@ -257,11 +258,7 @@ class MakeEvidence:
 
             else:
                 _logger.error(f"Невідомий тип контенту: {content_type}")
-                raise EDMException(
-                    redis=self.redis,
-                    queue=None,
-                    key=None,
-                    message_id=str(self.message_id),
+                raise self._edm_exception(
                     code="EDM:ERR:0006",
                     message="Невідомий тип контенту",
                     detail=f"Невідомий тип контенту: {content_type}",

@@ -149,3 +149,6 @@ dmypy.json
 cython_debug/
 
 .idea
+
+# oots_lib.lib is a package, not a build artifact
+!oots_lib/lib/

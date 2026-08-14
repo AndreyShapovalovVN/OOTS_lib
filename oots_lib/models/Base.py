@@ -7,21 +7,15 @@ from dataclasses import asdict, dataclass
 
 from lxml import etree
 
-from oots_lib.libs.CreatePDF import generate_pdf_from_xslt
+from oots_lib.lib.CreatePDF import generate_pdf_from_xslt
+from oots_lib.lib.xml_utils import set_element_text
 
 
 @dataclass
 class Base(ABC):
     @staticmethod
     def _set_text(element: etree._Element, value) -> None:
-        if value is None:
-            ...
-        elif isinstance(value, bool):
-            element.text = str(value).lower()
-        elif isinstance(value, (datetime.date, datetime.datetime)):
-            element.text = value.isoformat()
-        else:
-            element.text = str(value)
+        set_element_text(element, value)
 
     @staticmethod
     def _parse_date(value) -> datetime.date | None:
