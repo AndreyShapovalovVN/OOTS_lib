@@ -83,9 +83,11 @@ async def test_get_returns_none_for_missing_key(fake_redis_client):
     assert await wrapper_with(fake_redis_client).get_from_redis("key") is None
 
 
-async def test_get_returns_none_for_invalid_json(fake_redis_client):
+async def test_get_raises_redis_data_error_for_invalid_json(fake_redis_client):
     fake_redis_client.storage["key"] = b"{not json"
-    assert await wrapper_with(fake_redis_client).get_from_redis("key") is None
+
+    with pytest.raises(use_redis.RedisDataError, match="розшифрувати JSON"):
+        await wrapper_with(fake_redis_client).get_from_redis("key")
 
 
 async def test_save_and_get_raw_bytes(fake_redis_client):

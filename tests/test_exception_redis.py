@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 
-from oots_lib.lib.exception import KEYS, EDMException
+from oots_lib.lib.exception import KEYS, EDMException, ReportingError
 
 
 class RedisSpy:
@@ -87,22 +87,62 @@ async def test_async_context_schedules_side_effects_as_task():
     assert redis.pushed == [("queue-1", "msg-1")]
 
 
-def test_redis_save_failure_does_not_break_construction():
+def test_redis_save_failure_is_recorded_not_raised():
     redis = RedisSpy(save_error=RuntimeError("redis down"))
 
     exc = make_exception(redis)
 
     assert exc.code == "EDM:ERR:0004"
-    assert redis.pushed == [("queue-1", "msg-1")]
+    assert exc.reported is False
+    assert isinstance(exc.reporting_error, ReportingError)
+    assert redis.pushed == []
 
 
-def test_queue_push_failure_does_not_break_construction():
+def test_queue_push_failure_is_recorded_after_successful_save():
     redis = RedisSpy(push_error=RuntimeError("queue down"))
 
     exc = make_exception(redis)
 
     assert exc.code == "EDM:ERR:0004"
     assert len(redis.saved) == 1
+    assert exc.reported is False
+    assert isinstance(exc.reporting_error, ReportingError)
+
+
+async def test_report_is_idempotent():
+    redis = RedisSpy()
+    exc = make_exception(redis)
+    await exc.reporting_task
+
+    assert exc.reported is True
+    await exc.report()
+
+    assert len(redis.saved) == 1
+    assert redis.pushed == [("queue-1", "msg-1")]
+
+
+async def test_report_raises_reporting_error_when_queue_is_undefined(monkeypatch):
+    monkeypatch.setattr(EDMException, "QUEUE_OUTCOMING", None)
+    redis = RedisSpy()
+    exc = make_exception(redis, queue=None)
+
+    with pytest.raises(ReportingError, match="QUEUE_OUTCOMING"):
+        await exc.reporting_task
+
+    assert exc.reported is False
+    assert isinstance(exc.reporting_error, ReportingError)
+
+
+async def test_reporting_task_cancellation_is_recorded():
+    redis = RedisSpy()
+    exc = make_exception(redis)
+
+    exc.reporting_task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await exc.reporting_task
+
+    assert isinstance(exc.reporting_error, asyncio.CancelledError)
+    assert exc.reported is False
 
 
 def test_is_raisable():

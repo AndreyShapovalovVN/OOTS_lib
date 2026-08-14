@@ -2,17 +2,23 @@ import httpx
 import pytest
 
 import oots_lib.lib.toLogger as to_logger_module
-from oots_lib.lib.toLogger import ToLogger
+from oots_lib.lib.toLogger import LoggerServiceError, ToLogger
 
 
 class FakeResponse:
-    status_code = 200
-    text = "ok"
+    def __init__(self, status_code: int = 200, text: str = "ok"):
+        self.status_code = status_code
+        self.text = text
+
+    @property
+    def is_error(self) -> bool:
+        return self.status_code >= 400
 
 
 class FakeClient:
-    def __init__(self, error: Exception | None = None):
+    def __init__(self, error: Exception | None = None, response: FakeResponse | None = None):
         self.error = error
+        self.response = response or FakeResponse()
         self.calls: list[dict] = []
         self.timeout: float | None = None
         self.closed = False
@@ -27,7 +33,7 @@ class FakeClient:
         self.calls.append({"url": url, "headers": headers, "json": json})
         if self.error is not None:
             raise self.error
-        return FakeResponse()
+        return self.response
 
 
 @pytest.fixture
@@ -72,9 +78,19 @@ def test_send_to_logger_posts_payload(fake_client):
     assert call["json"] == logger.payload
 
 
-def test_send_to_logger_swallows_transport_errors(monkeypatch):
+def test_send_to_logger_raises_on_transport_error(monkeypatch):
     client = FakeClient(error=httpx.ConnectError("недоступний"))
     monkeypatch.setattr(to_logger_module.httpx, "Client", lambda timeout=None: client)
 
-    assert ToLogger("conv-1").send_to_logger() is None
+    with pytest.raises(LoggerServiceError, match="Помилка надсилання журналу"):
+        ToLogger("conv-1").send_to_logger()
+    assert client.closed is True
+
+
+def test_send_to_logger_raises_on_error_status(monkeypatch):
+    client = FakeClient(response=FakeResponse(status_code=500, text="boom"))
+    monkeypatch.setattr(to_logger_module.httpx, "Client", lambda timeout=None: client)
+
+    with pytest.raises(LoggerServiceError, match="повернув 500"):
+        ToLogger("conv-1").send_to_logger()
     assert client.closed is True

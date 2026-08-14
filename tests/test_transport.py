@@ -3,7 +3,7 @@ import datetime
 import pytest
 
 import oots_lib.Transport as transport_module
-from oots_lib.lib.exception import EDMException
+from oots_lib.lib.exception import EDMException, TransportError
 from oots_lib.Transport import SOAPTransport
 
 
@@ -110,11 +110,24 @@ def test_client_creation_failure_raises_edm_exception(monkeypatch, transport_env
         Service("GetDocuments", "conv-1")
 
 
-def test_send_error_message_is_silent_when_disabled(transport_env):
+def test_send_error_message_raises_transport_error_when_publishing_disabled(transport_env):
     service = Service("GetDocuments", "conv-1", if_send_error=False)
 
-    assert service.send_error_message(code="c", message="m", detail="d") is None
+    with pytest.raises(TransportError, match=r"\[c\] m: d"):
+        service.send_error_message(code="c", message="m", detail="d")
+
     assert transport_env["redis"].pushed == []
+    assert transport_env["redis"].saved == {}
+
+
+def test_send_error_message_chains_cause(transport_env):
+    service = Service("GetDocuments", "conv-1", if_send_error=False)
+    cause = RuntimeError("root cause")
+
+    with pytest.raises(TransportError) as excinfo:
+        service.send_error_message(code="c", message="m", detail="d", cause=cause)
+
+    assert excinfo.value.__cause__ is cause
 
 
 def test_send_error_message_saves_and_pushes(transport_env):

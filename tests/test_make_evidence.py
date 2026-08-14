@@ -1,4 +1,5 @@
 import base64
+from types import SimpleNamespace
 from typing import Any, cast
 
 import pytest
@@ -173,10 +174,52 @@ async def test_read_data_uses_edm_request_content(monkeypatch):
             EDMRequest(href="cid:1@gov.ua", MimeType="application/xml", content="<q/>")
         ),
     )
+    person = make_person()
+    monkeypatch.setattr(
+        make_evidence_module,
+        "get_person_from_redis",
+        lambda redis, key: _async_value(person),
+    )
 
-    await Evidence("msg-1", RedisSpy()).read_data()
+    evidence = Evidence("msg-1", cast("Any", RedisSpy()))
+    await evidence.read_data()
 
     assert captured["content"] == "<q/>"
+    assert evidence.person is person
+
+
+async def test_read_data_raises_when_edm_request_is_missing(monkeypatch):
+    monkeypatch.setattr(
+        make_evidence_module,
+        "get_edm_request_from_redis",
+        lambda redis, key: _async_value(None),
+    )
+
+    with pytest.raises(EDMException, match="Запит EDM не знайдено") as excinfo:
+        await Evidence("msg-1", cast("Any", RedisSpy())).read_data()
+
+    assert excinfo.value.code == "EDM:ERR:0004"
+
+
+async def test_read_data_raises_when_person_is_missing(monkeypatch):
+    monkeypatch.setattr(make_evidence_module, "Parsing", FakeParsing)
+    monkeypatch.setattr(
+        make_evidence_module,
+        "get_edm_request_from_redis",
+        lambda redis, key: _async_value(
+            EDMRequest(href="cid:1@gov.ua", MimeType="application/xml", content="<q/>")
+        ),
+    )
+    monkeypatch.setattr(
+        make_evidence_module,
+        "get_person_from_redis",
+        lambda redis, key: _async_value(None),
+    )
+
+    with pytest.raises(EDMException, match="Інформацію про людину не знайдено") as excinfo:
+        await Evidence("msg-1", cast("Any", RedisSpy())).read_data()
+
+    assert excinfo.value.code == "EDM:ERR:0004"
 
 
 async def _async_value(value):
@@ -208,7 +251,15 @@ def test_generate_metadata_requires_person():
     evidence = build(RedisSpy())
     evidence.person = None
 
-    with pytest.raises(AssertionError, match="person must be set"):
+    with pytest.raises(ValueError, match="не зчитані"):
+        evidence.generate_metadata()
+
+
+def test_generate_metadata_requires_person_xml():
+    evidence = build(RedisSpy())
+    evidence.person = cast("Any", SimpleNamespace(xml_tree=None))
+
+    with pytest.raises(ValueError, match="XML особи"):
         evidence.generate_metadata()
 
 
