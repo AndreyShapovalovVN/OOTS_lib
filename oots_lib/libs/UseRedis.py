@@ -9,6 +9,7 @@ from urllib.parse import urlsplit, urlunsplit
 import redis
 import redis.asyncio as Redis
 from redis.maint_notifications import MaintNotificationsConfig
+
 from oots_lib.import_env import import_env
 
 _logger = logging.getLogger(__name__)
@@ -24,6 +25,10 @@ _redis_instance: Optional["UseRedisAsync"] = None
 
 class KeyIsNone(ValueError):
     """Виключення для випадків, коли ключ Redis є None."""
+
+
+class RedisDataError(ValueError):
+    """Дані у Redis мають некоректний формат і не можуть бути десеріалізовані."""
 
 
 def mask_redis_url(url: str) -> str:
@@ -114,7 +119,7 @@ class UseRedisAsync:
         except Exception as e:
             raise redis.exceptions.ConnectionError(
                 f"Не вдалося під'єднатись до Redis: {e}"
-            )  # noqa: B904
+            ) from e
 
     @staticmethod
     def _normalize_prefix(prefix: str) -> str:
@@ -133,7 +138,11 @@ class UseRedisAsync:
             key: Ключ Redis для отримання даних
 
         Returns:
-            Десеріалізований словник або None, якщо ключ не існує або дані невалідні
+            Десеріалізований словник або None, якщо ключ не існує
+
+        Raises:
+            KeyIsNone: Якщо ключ є None
+            RedisDataError: Якщо значення за ключем не є валідним JSON
         """
         if key is None:
             raise KeyIsNone()
@@ -144,11 +153,12 @@ class UseRedisAsync:
             return None
         try:
             data = json.loads(data)
-            _logger.debug(f"Отримано дані з Redis для ключа {redis_key}")
-            return data
         except json.JSONDecodeError as e:
-            _logger.debug(f"Не вдалося розшифрувати JSON для ключа {redis_key}: {e}")
-            return None
+            raise RedisDataError(
+                f"Не вдалося розшифрувати JSON для ключа {redis_key}: {e}"
+            ) from e
+        _logger.debug(f"Отримано дані з Redis для ключа {redis_key}")
+        return data
 
     async def get_raw_from_redis(self, key: str | None) -> bytes | None:
         """Отримує сирі bytes дані з Redis.
@@ -273,7 +283,9 @@ class UseRedisAsync:
             _logger.debug(f"Отримано прапор {redis_key} = {value}")
             return value
         except json.JSONDecodeError as e:
-            _logger.debug(f"Не вдалося розшифрувати булевий прапор {redis_key}: {e}")
+            _logger.warning(
+                f"Не вдалося розшифрувати булевий прапор {redis_key}: {e}, повертаємо default"
+            )
             return default
 
     @staticmethod
@@ -343,21 +355,22 @@ class UseRedisAsync:
 
     async def disconnect(self) -> None:
         """Закриває з'єднання з Redis."""
-        try:
+        close_fn = getattr(self._redis_client, "aclose", None)
+        if close_fn is None:
             close_fn = getattr(self._redis_client, "close", None)
-            if close_fn is None:
-                close_fn = getattr(self._redis_client, "aclose", None)
 
-            if close_fn is None:
-                _logger.debug("Redis клієнт не має close/aclose")
-                return
+        if close_fn is None:
+            _logger.warning("Redis клієнт не має close/aclose")
+            return
 
-            close_result = close_fn
+        try:
+            close_result = close_fn()
             if inspect.isawaitable(close_result):
                 await close_result
-            _logger.debug("Redis з'єднання закрито")
         except Exception as e:
-            _logger.debug(f"Помилка при закритті Redis: {e}")
+            _logger.warning(f"Помилка при закритті Redis: {e}", exc_info=e)
+            return
+        _logger.debug("Redis з'єднання закрито")
 
     async def __aenter__(self) -> "UseRedisAsync":
         return self
