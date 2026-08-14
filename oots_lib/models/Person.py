@@ -7,6 +7,7 @@ from lxml import etree
 
 from oots_lib.lib.NS import NS
 from oots_lib.lib.redis_serde import load_model_from_redis, save_model_to_redis
+from oots_lib.lib.xml_safety import safe_fromstring
 from oots_lib.models.Base import Base, MainBase
 from oots_lib.import_env import import_env
 
@@ -162,7 +163,7 @@ class Person(MainBase, NS):
     @xml.setter
     def xml(self, xml: str | bytes | etree._Element) -> None:
         if isinstance(xml, str | bytes):
-            root = etree.fromstring(xml)
+            root = safe_fromstring(xml)
             _logger.debug("XML зчитано")
         elif isinstance(xml, etree._Element):
             root = xml
