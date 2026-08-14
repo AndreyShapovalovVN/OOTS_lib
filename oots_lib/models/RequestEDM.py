@@ -1,5 +1,7 @@
 from dataclasses import asdict, dataclass
 
+from oots_lib.lib.redis_serde import load_model_from_redis, save_model_to_redis
+
 
 @dataclass
 class EDMRequest:
@@ -27,11 +29,14 @@ async def save_edm_request_to_redis(redis_client, key: str, request: EDMRequest,
         key: Ключ Redis для збереження
         request: Об'єкт EDMRequest
     """
-    if not isinstance(request, EDMRequest):
-        raise TypeError(f"Очікувався EDMRequest, отримано {type(request).__name__}")
-
-    value = [asdict(request)] if if_save_list else asdict(request)
-    await redis_client.save_to_redis(key, value)
+    await save_model_to_redis(
+        redis_client,
+        key,
+        request,
+        EDMRequest,
+        to_dict=asdict,
+        as_list=if_save_list,
+    )
 
 
 async def get_edm_request_from_redis(redis_client, key: str) -> EDMRequest | None:
@@ -45,20 +50,9 @@ async def get_edm_request_from_redis(redis_client, key: str) -> EDMRequest | Non
     Returns:
         EDMRequest або None, якщо ключ відсутній
     """
-    data = await redis_client.get_from_redis(key)
-    if data is None:
-        return None
-
-    # Підтримка старого формату, де в Redis зберігається список
-    if isinstance(data, list):
-        if not data:
-            return None
-        data = data[0]
-
-    if not isinstance(data, dict):
-        raise ValueError(f"Некоректний формат EDMRequest у Redis: {type(data).__name__}")
-
-    return _dict_to_edm_request(data)
+    return await load_model_from_redis(
+        redis_client, key, "EDMRequest", _dict_to_edm_request
+    )
 
 
 def _dict_to_edm_request(data: dict) -> EDMRequest:

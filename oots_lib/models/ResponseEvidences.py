@@ -3,6 +3,9 @@ import uuid
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
+from oots_lib.lib.redis_serde import load_model_from_redis, save_model_to_redis
+
+
 # Дозволені значення classificationNode.
 # За потреби можна розширити без зміни логіки моделі.
 ALLOWED_CLASSIFICATION_NODES = [
@@ -112,14 +115,13 @@ async def save_evidences_to_redis(redis_client, key: str, evidences: Evidences) 
         TypeError: Якщо evidences не є Evidences об'єктом
         Exception: Якщо помилка при збереженні до Redis
     """
-    if not isinstance(evidences, Evidences):
-        raise TypeError(f"Очікувався Evidences, отримано {type(evidences).__name__}")
-
-    # Конвертуємо dataclass у dict для JSON-серіалізації
-    evidences_dict = asdict(evidences)
-
-    # Зберігаємо через чинний метод UseRedisAsync
-    await redis_client.save_to_redis(key, evidences_dict)
+    await save_model_to_redis(
+        redis_client,
+        key,
+        evidences,
+        Evidences,
+        to_dict=asdict,
+    )
 
 
 async def get_evidences_from_redis(redis_client, key: str) -> Evidences | None:
@@ -133,18 +135,13 @@ async def get_evidences_from_redis(redis_client, key: str) -> Evidences | None:
     Returns:
         Об'єкт Evidences або None, якщо ключ не знайдено або дані невалідні
     """
-    # Отримуємо дані з Redis через чинний метод
-    data = await redis_client.get_from_redis(key)
-
-    if data is None:
-        return None
-
-    try:
-        # Конвертуємо dict назад у модель Evidences
-        evidences = _dict_to_evidences(data)
-        return evidences
-    except (KeyError, TypeError, ValueError) as e:
-        raise ValueError(f"Не вдалось десеріалізувати Evidences з Redis: {e}") from e
+    return await load_model_from_redis(
+        redis_client,
+        key,
+        "Evidences",
+        _dict_to_evidences,
+        error_message="Не вдалось десеріалізувати Evidences з Redis",
+    )
 
 
 def to_legacy_evidences_dict(evidences: Evidences) -> dict:

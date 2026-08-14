@@ -1,5 +1,3 @@
-from typing import Optional
-
 from lxml import etree
 
 from oots_lib.lib.NS import NS
@@ -9,19 +7,22 @@ class EDMException(NS, Exception):
     """
     Клас користувацького виключення, який формує XML Element для EDM-помилок.
     """
+    DEFAULT_MESSAGE: str | None = None
+    DEFAULT_CODE: str | None = None
+    DEFAULT_ETYPE: str | None = None
     DEFAULT_SEVERITY = "urn:oasis:names:tc:ebxml-regrep:ErrorSeverityType:Error"
 
     def __init__(
             self,
-            message: Optional[str] = None,
-            code: Optional[str] = None,
-            etype: Optional[str] = None,
-            detail: Optional[str] = None,
-            severity: Optional[str] = None,
+            message: str | None = None,
+            code: str | None = None,
+            etype: str | None = None,
+            detail: str | None = None,
+            severity: str | None = None,
     ):
-        self.message = message
-        self.code = code
-        self.e_type = etype
+        self.message = message or self.DEFAULT_MESSAGE
+        self.code = code or self.DEFAULT_CODE
+        self.e_type = etype or self.DEFAULT_ETYPE
         self.detail = detail
         self.severity = severity or self.DEFAULT_SEVERITY
 
@@ -43,163 +44,92 @@ class EDMException(NS, Exception):
     @property
     def xml(self) -> etree._Element:  # type: ignore[override]
         if self._xml is None:
-            attrib = self._clean_attrib({
-                self._tname("xsi", "type"): self.e_type,
-                "severity": self.severity,
-                "message": self.message,
-                "detail": self.detail,
-                "code": self.code,
-            })
-
-            self._xml = etree.Element(
-                self._tname("rs", "Exception"),
-                nsmap=self._ns,
-                attrib=attrib,
+            self._xml = self._element(
+                "rs",
+                "Exception",
+                attrib={
+                    self._tname("xsi", "type"): self.e_type,
+                    "severity": self.severity,
+                    "message": self.message,
+                    "detail": self.detail,
+                    "code": self.code,
+                },
             )
         return self._xml
-
-    @staticmethod
-    def _clean_attrib(d: dict) -> dict:
-        """Викидає None і приводить значення до str."""
-        out = {}
-        for k, v in d.items():
-            if v is None:
-                continue
-            out[k] = str(v)
-        return out
 
     def to_pretty_xml(self) -> str:
         return etree.tostring(self.xml, pretty_print=True, encoding="unicode")
 
 
-class AuthenticationException(EDMException):
+class TypedEDMException(EDMException):
+    """Базовий клас для помилок з наперед визначеними кодом, типом і текстом.
+
+    Підклас лише оголошує `DEFAULT_*`-константи, конструктор спільний.
+    """
+
+    def __init__(self, detail: str | None = None, message: str | None = None):
+        super().__init__(message=message, detail=detail)
+
+
+class AuthenticationException(TypedEDMException):
     DEFAULT_MESSAGE = "Failed Authentication"
     DEFAULT_CODE = "EDM:ERR:0001"
     DEFAULT_ETYPE = "rs:AuthenticationExceptionType"
     DEFAULT_SEVERITY = "urn:sr.oots.tech.ec.europa.eu:codes:ErrorSeverity:EDMErrorResponse:PreviewRequired"
 
-    def __init__(self, detail: Optional[str] = None, message: Optional[str] = None):
-        super().__init__(
-            message=message or self.DEFAULT_MESSAGE,
-            code=self.DEFAULT_CODE,
-            etype=self.DEFAULT_ETYPE,
-            detail=detail,
-            severity=self.DEFAULT_SEVERITY,
-        )
 
-
-class AuthorizationException(EDMException):
+class AuthorizationException(TypedEDMException):
     DEFAULT_MESSAGE = "Failed Authentication"
     DEFAULT_CODE = "EDM:ERR:0002"
     DEFAULT_ETYPE = "rs:AuthorizationExceptionType"
     DEFAULT_SEVERITY = "urn:sr.oots.tech.ec.europa.eu:codes:ErrorSeverity:EDMErrorResponse:PreviewRequired"
 
-    def __init__(self, detail: Optional[str] = None, message: Optional[str] = None):
-        super().__init__(
-            message=message or self.DEFAULT_MESSAGE,
-            code=self.DEFAULT_CODE,
-            etype=self.DEFAULT_ETYPE,
-            detail=detail,
-            severity=self.DEFAULT_SEVERITY,
-        )
 
-
-class InvalidRequestException(EDMException):
+class InvalidRequestException(TypedEDMException):
     DEFAULT_MESSAGE = "Syntactically or semantically invalid request"
     DEFAULT_CODE = "EDM:ERR:0003"
     DEFAULT_ETYPE = "rs:InvalidRequestExceptionType"
 
-    def __init__(self, detail: Optional[str] = None, message: Optional[str] = None):
-        super().__init__(
-            message=message or self.DEFAULT_MESSAGE,
-            code=self.DEFAULT_CODE,
-            etype=self.DEFAULT_ETYPE,
-            detail=detail,
-            severity=self.DEFAULT_SEVERITY,
-        )
 
-
-class ObjectNotFoundException(EDMException):
+class ObjectNotFoundException(TypedEDMException):
     DEFAULT_MESSAGE = "Object not found"
     DEFAULT_CODE = "EDM:ERR:0004"
     DEFAULT_ETYPE = "rs:ObjectNotFoundExceptionType"
 
-    def __init__(self, detail: Optional[str] = None, message: Optional[str] = None):
-        super().__init__(
-            message=message or self.DEFAULT_MESSAGE,
-            code=self.DEFAULT_CODE,
-            etype=self.DEFAULT_ETYPE,
-            detail=detail,
-            severity=self.DEFAULT_SEVERITY,
-        )
 
-
-class TimeoutException(EDMException):
+class TimeoutException(TypedEDMException):
     DEFAULT_MESSAGE = "Exceeding a timeout period"
     DEFAULT_CODE = "EDM:ERR:0005"
     DEFAULT_ETYPE = "rs:TimeoutExceptionType"
 
-    def __init__(self, detail: Optional[str] = None, message: Optional[str] = None):
-        super().__init__(
-            message=message or self.DEFAULT_MESSAGE,
-            code=self.DEFAULT_CODE,
-            etype=self.DEFAULT_ETYPE,
-            detail=detail,
-            severity=self.DEFAULT_SEVERITY,
-        )
 
-
-class UnresolvedReferenceException(EDMException):
+class UnresolvedReferenceException(TypedEDMException):
     DEFAULT_MESSAGE = "Referenced object that cannot be resolved"
     DEFAULT_CODE = "EDM:ERR:0006"
     DEFAULT_ETYPE = "rs:UnresolvedReferenceExceptionType"
 
-    def __init__(self, detail: Optional[str] = None, message: Optional[str] = None):
-        super().__init__(
-            message=message or self.DEFAULT_MESSAGE,
-            code=self.DEFAULT_CODE,
-            etype=self.DEFAULT_ETYPE,
-            detail=detail,
-            severity=self.DEFAULT_SEVERITY,
-        )
 
-
-class UnsupportedCapabilityException(EDMException):
+class UnsupportedCapabilityException(TypedEDMException):
     DEFAULT_MESSAGE = "Optional features or capabilities are not supported"
     DEFAULT_CODE = 'EDM:ERR:0007'
     DEFAULT_ETYPE = "rs:UnsupportedCapabilityExceptionType"
 
-    def __init__(self, detail: Optional[str] = None, message: Optional[str] = None):
-        super().__init__(
-            message=message or self.DEFAULT_MESSAGE,
-            code=self.DEFAULT_CODE,
-            etype=self.DEFAULT_ETYPE,
-            detail=detail,
-            severity=self.DEFAULT_SEVERITY,
-        )
 
-
-class QueryException(EDMException):
+class QueryException(TypedEDMException):
     DEFAULT_MESSAGE = "Query Exception"
     DEFAULT_CODE = "EDM:ERR:0008"
     DEFAULT_ETYPE = "query:QueryExceptionType"
 
-    def __init__(self, detail: Optional[str] = None, message: Optional[str] = None):
-        super().__init__(
-            message=message or self.DEFAULT_MESSAGE,
-            code=self.DEFAULT_CODE,
-            etype=self.DEFAULT_ETYPE,
-            detail=detail,
-            severity=self.DEFAULT_SEVERITY,
-        )
 
 __all__ = [
     "AuthenticationException",
     "AuthorizationException",
+    "EDMException",
     "InvalidRequestException",
     "ObjectNotFoundException",
+    "QueryException",
     "TimeoutException",
+    "TypedEDMException",
     "UnresolvedReferenceException",
     "UnsupportedCapabilityException",
-    "QueryException",
 ]

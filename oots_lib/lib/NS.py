@@ -1,4 +1,8 @@
+from typing import Any
+
 from lxml import etree
+
+from oots_lib.lib.xml_utils import clean_attrib, set_element_text
 
 
 class NS:
@@ -19,6 +23,40 @@ class NS:
         if not ns:
             return tag
         return f"{{{self._ns[ns]}}}{tag}"
+
+    def _element(
+        self,
+        ns: str | None,
+        tag: str,
+        text: Any = None,
+        attrib: dict[Any, Any] | None = None,
+        nsmap: dict[str, str] | None = None,
+    ) -> etree._Element:
+        """Створює елемент у просторі імен `ns` з текстом та атрибутами."""
+        element = etree.Element(
+            self._tname(ns, tag),
+            nsmap=self._ns if nsmap is None else nsmap,
+            attrib=clean_attrib(attrib or {}),
+        )
+        set_element_text(element, text)
+        return element
+
+    def _subelement(
+        self,
+        parent: etree._Element,
+        ns: str | None,
+        tag: str,
+        text: Any = None,
+        attrib: dict[Any, Any] | None = None,
+    ) -> etree._Element:
+        """Створює дочірній елемент у просторі імен `ns`."""
+        element = etree.SubElement(
+            parent,
+            self._tname(ns, tag),
+            attrib=clean_attrib(attrib or {}),
+        )
+        set_element_text(element, text)
+        return element
 
     @property
     def xml_tree(self) -> etree._Element | None:

@@ -7,6 +7,7 @@ from lxml import etree
 
 from oots_lib.import_env import import_env
 from oots_lib.lib.NS import NS
+from oots_lib.lib.redis_serde import load_model_from_redis, save_model_to_redis
 from oots_lib.lib.xml_safety import safe_fromstring
 from oots_lib.models.Base import Base, MainBase
 
@@ -40,15 +41,14 @@ class Identifier(Base, NS):
 
     def get_element(self, sdg: bool=True) -> etree._Element:
         if sdg:
-            element = etree.Element(
-                self._tname("sdg", "Identifier"),
+            return self._element(
+                "sdg",
+                "Identifier",
+                text=self.value,
                 attrib={"schemeID": self.schemeID},
-                nsmap={"sdg": self._ns["sdg"]})
-            self._set_text(element, self.value)
-        else:
-            element = etree.Element("Identifier")
-            self._set_text(element, self.identifier)
-        return element
+                nsmap={"sdg": self._ns["sdg"]},
+            )
+        return self._element(None, "Identifier", text=self.identifier, nsmap={})
 
     @property
     def value(self) -> str | None:
@@ -94,6 +94,36 @@ class Person(MainBase, NS):
     _xml: etree._Element | None = field(init=False, repr=False, default=None)
     _ns = {"sdg": "http://data.europa.eu/p4s"}  # NOSONAR
 
+    # Поля з атрибутом nonLatin: значення у `<Name>`, транслітерація у `NameNonLatin`.
+    _NAME_FIELDS = ("FamilyName", "GivenName", "AdditionalName", "BirthName")
+    # Поля, які серіалізуються як простий текстовий елемент.
+    _TEXT_FIELDS = (
+        "Gender",
+        "Nationality",
+        "CountryOfBirth",
+        "TownOfBirth",
+        "CountryOfResidence",
+    )
+    # Відповідність між іменами полів моделі та легасі snake_case-ключами.
+    _FIELD_ALIASES = (
+        ("LevelOfAssurance", "level_of_assurance"),
+        ("identifier", "eidas_identifier"),
+        ("FamilyName", "family_name"),
+        ("FamilyNameNonLatin", "family_name_non_latin"),
+        ("GivenName", "given_name"),
+        ("GivenNameNonLatin", "given_name_non_latin"),
+        ("AdditionalName", "additional_name"),
+        ("AdditionalNameNonLatin", "additional_name_non_latin"),
+        ("BirthName", "birth_name"),
+        ("BirthNameNonLatin", "birth_name_non_latin"),
+        ("DateOfBirth", "date_of_birth"),
+        ("Gender", "gender"),
+        ("Nationality", "nationality"),
+        ("CountryOfBirth", "country_of_birth"),
+        ("TownOfBirth", "town_of_birth"),
+        ("CountryOfResidence", "country_of_residence"),
+    )
+
     def __post_init__(self) -> None:
         self._xml = None
 
@@ -115,6 +145,16 @@ class Person(MainBase, NS):
             return None
         return element.text
 
+    def _find(self, root: etree._Element, tag: str):
+        return root.find(f".//sdg:{tag}", self._ns)  # type: ignore[arg-type]
+
+    def _find_text(self, root: etree._Element, tag: str):
+        return self._get_text(self._find(root, tag))
+
+    @staticmethod
+    def _serialize_value(value: Any) -> Any:
+        return value.isoformat() if isinstance(value, datetime.date) else value
+
     @property
     def xml(self) -> str:
         return self.get_xml()
@@ -131,46 +171,19 @@ class Person(MainBase, NS):
             raise TypeError("xml має бути str або bytes")
 
         _logger.debug("Парсинг значень")
-        self.LevelOfAssurance = self._get_text(
-            root.find(".//sdg:LevelOfAssurance", self._ns)  # type: ignore
-        )
-        self.identifier = Identifier(
-            *self._get_id(
-                root.find(".//sdg:Identifier", self._ns)  # type: ignore
-            )
-        )
-        self.FamilyName, self.FamilyNameNonLatin = self._parse_name(
-            root.find(".//sdg:FamilyName", self._ns)  # type: ignore
-        )
-        self.GivenName, self.GivenNameNonLatin = self._parse_name(
-            root.find(".//sdg:GivenName", self._ns)  # type: ignore
-        )
-        self.AdditionalName, self.AdditionalNameNonLatin = self._parse_name(
-            root.find(".//sdg:AdditionalName", self._ns)  # type: ignore
-        )
-        self.BirthName, self.BirthNameNonLatin = self._parse_name(
-            root.find(".//sdg:BirthName", self._ns)  # type: ignore
-        )
-        self.DateOfBirth = self._parse_date(
-            self._get_text(
-                root.find(".//sdg:DateOfBirth", self._ns)  # type: ignore
-            )
-        )
-        self.Gender = self._get_text(
-            root.find(".//sdg:Gender", self._ns)  # type: ignore
-        )
-        self.Nationality = self._get_text(
-            root.find(".//sdg:Nationality", self._ns)  # type: ignore
-        )
-        self.CountryOfBirth = self._get_text(
-            root.find(".//sdg:CountryOfBirth", self._ns)  # type: ignore
-        )
-        self.TownOfBirth = self._get_text(
-            root.find(".//sdg:TownOfBirth", self._ns)  # type: ignore
-        )
-        self.CountryOfResidence = self._get_text(
-            root.find(".//sdg:CountryOfResidence", self._ns)  # type: ignore
-        )
+        self.LevelOfAssurance = self._find_text(root, "LevelOfAssurance")
+        self.identifier = Identifier(*self._get_id(self._find(root, "Identifier")))
+
+        for name in self._NAME_FIELDS:
+            value, non_latin = self._parse_name(self._find(root, name))
+            setattr(self, name, value)
+            setattr(self, f"{name}NonLatin", non_latin)
+
+        self.DateOfBirth = self._parse_date(self._find_text(root, "DateOfBirth"))
+
+        for tag in self._TEXT_FIELDS:
+            setattr(self, tag, self._find_text(root, tag))
+
         self._xml = root
         _logger.debug("Дані зчитані")
 
@@ -179,81 +192,27 @@ class Person(MainBase, NS):
         return self.get_element()
 
     def get_element(self) -> etree._Element:
-        root = etree.Element(self._tname("sdg", "Person"), nsmap=self._ns)
+        root = self._element("sdg", "Person")
 
-        etree.SubElement(
-            root, self._tname("sdg", "LevelOfAssurance")
-        ).text = self.LevelOfAssurance
+        self._subelement(root, "sdg", "LevelOfAssurance", text=self.LevelOfAssurance)
 
         if self.identifier is not None and self.identifier.value:
             root.append(self.identifier.get_element(sdg=True))
 
-        if self.FamilyNameNonLatin:
-            etree.SubElement(
+        for name in self._NAME_FIELDS:
+            non_latin = getattr(self, f"{name}NonLatin")
+            self._subelement(
                 root,
-                self._tname("sdg", "FamilyName"),
-                attrib={"nonLatin": self.FamilyNameNonLatin},
-            ).text = self.FamilyName
-        else:
-            etree.SubElement(
-                root, self._tname("sdg", "FamilyName")
-            ).text = self.FamilyName
+                "sdg",
+                name,
+                text=getattr(self, name),
+                attrib={"nonLatin": non_latin} if non_latin else None,
+            )
 
-        if self.GivenNameNonLatin:
-            etree.SubElement(
-                root,
-                self._tname("sdg", "GivenName"),
-                attrib={"nonLatin": self.GivenNameNonLatin},
-            ).text = self.GivenName
-        else:
-            etree.SubElement(
-                root, self._tname("sdg", "GivenName")
-            ).text = self.GivenName
+        self._subelement(root, "sdg", "DateOfBirth", text=self.DateOfBirth)
 
-        if self.AdditionalNameNonLatin:
-            etree.SubElement(
-                root,
-                self._tname("sdg", "AdditionalName"),
-                attrib={"nonLatin": self.AdditionalNameNonLatin},
-            ).text = self.AdditionalName
-        else:
-            etree.SubElement(
-                root, self._tname("sdg", "AdditionalName")
-            ).text = self.AdditionalName
-
-        if self.BirthNameNonLatin:
-            etree.SubElement(
-                root,
-                self._tname("sdg", "BirthName"),
-                attrib={"nonLatin": self.BirthNameNonLatin},
-            ).text = self.BirthName
-        else:
-            etree.SubElement(
-                root, self._tname("sdg", "BirthName")
-            ).text = self.BirthName
-
-        if isinstance(self.DateOfBirth, datetime.date):
-            etree.SubElement(
-                root, self._tname("sdg", "DateOfBirth")
-            ).text = self.DateOfBirth.isoformat()
-        else:
-            etree.SubElement(
-                root, self._tname("sdg", "DateOfBirth")
-            ).text = self.DateOfBirth
-
-        etree.SubElement(root, self._tname("sdg", "Gender")).text = self.Gender
-        etree.SubElement(
-            root, self._tname("sdg", "Nationality")
-        ).text = self.Nationality
-        etree.SubElement(
-            root, self._tname("sdg", "CountryOfBirth")
-        ).text = self.CountryOfBirth
-        etree.SubElement(
-            root, self._tname("sdg", "TownOfBirth")
-        ).text = self.TownOfBirth
-        etree.SubElement(
-            root, self._tname("sdg", "CountryOfResidence")
-        ).text = self.CountryOfResidence
+        for tag in self._TEXT_FIELDS:
+            self._subelement(root, "sdg", tag, text=getattr(self, tag))
 
         self._xml = root
         return root
@@ -262,35 +221,20 @@ class Person(MainBase, NS):
         return super().get_xml()
 
     def get_dict(self) -> dict[str, Any]:
-        return {
-            "LevelOfAssurance": self.LevelOfAssurance,
-            "identifier": (
-                {
-                    "value": self.identifier.value,
-                    "schemeID": self.identifier.schemeID,
-                }
-                if self.identifier is not None
-                else None
-            ),
-            "FamilyName": self.FamilyName,
-            "FamilyNameNonLatin": self.FamilyNameNonLatin,
-            "GivenName": self.GivenName,
-            "GivenNameNonLatin": self.GivenNameNonLatin,
-            "AdditionalName": self.AdditionalName,
-            "AdditionalNameNonLatin": self.AdditionalNameNonLatin,
-            "BirthName": self.BirthName,
-            "BirthNameNonLatin": self.BirthNameNonLatin,
-            "DateOfBirth": (
-                self.DateOfBirth.isoformat()
-                if isinstance(self.DateOfBirth, datetime.date)
-                else self.DateOfBirth
-            ),
-            "Gender": self.Gender,
-            "Nationality": self.Nationality,
-            "CountryOfBirth": self.CountryOfBirth,
-            "TownOfBirth": self.TownOfBirth,
-            "CountryOfResidence": self.CountryOfResidence,
-        }
+        data: dict[str, Any] = {}
+        for name, _ in self._FIELD_ALIASES:
+            if name == "identifier":
+                data[name] = (
+                    {
+                        "value": self.identifier.value,
+                        "schemeID": self.identifier.schemeID,
+                    }
+                    if self.identifier is not None
+                    else None
+                )
+            else:
+                data[name] = self._serialize_value(getattr(self, name))
+        return data
 
     @classmethod
     def set_from_dict(cls, data: dict[str, Any]) -> "Person":
@@ -312,32 +256,15 @@ class Person(MainBase, NS):
             legacy_identifier = data.get("eidas_identifier")
             identifier = Identifier(value=legacy_identifier) if legacy_identifier is not None else None
 
-        date_of_birth = data.get("DateOfBirth", data.get("date_of_birth"))
+        person = cls(identifier=identifier)
+        for name, alias in cls._FIELD_ALIASES:
+            if name == "identifier":
+                continue
+            setattr(person, name, data.get(name, data.get(alias)))
 
-        return cls(
-            LevelOfAssurance=str(data.get("LevelOfAssurance", data.get("level_of_assurance", "High")) or "High"),
-            identifier=identifier,
-            FamilyName=data.get("FamilyName", data.get("family_name")),
-            FamilyNameNonLatin=data.get("FamilyNameNonLatin", data.get("family_name_non_latin")),
-            GivenName=data.get("GivenName", data.get("given_name")),
-            GivenNameNonLatin=data.get("GivenNameNonLatin", data.get("given_name_non_latin")),
-            AdditionalName=data.get("AdditionalName", data.get("additional_name")),
-            AdditionalNameNonLatin=data.get(
-                "AdditionalNameNonLatin",
-                data.get("additional_name_non_latin"),
-            ),
-            BirthName=data.get("BirthName", data.get("birth_name")),
-            BirthNameNonLatin=data.get("BirthNameNonLatin", data.get("birth_name_non_latin")),
-            DateOfBirth=cls._parse_date(date_of_birth),
-            Gender=data.get("Gender", data.get("gender")),
-            Nationality=data.get("Nationality", data.get("nationality")),
-            CountryOfBirth=data.get("CountryOfBirth", data.get("country_of_birth")),
-            TownOfBirth=data.get("TownOfBirth", data.get("town_of_birth")),
-            CountryOfResidence=data.get(
-                "CountryOfResidence",
-                data.get("country_of_residence"),
-            ),
-        )
+        person.LevelOfAssurance = str(person.LevelOfAssurance or "High")
+        person.DateOfBirth = cls._parse_date(person.DateOfBirth)
+        return person
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Person":
@@ -346,48 +273,19 @@ class Person(MainBase, NS):
 
     @property
     def dict(self) -> dict[str, Any]:
-        return {
-            "level_of_assurance": self.LevelOfAssurance,
-            "eidas_identifier": self.identifier.value if self.identifier else None,
-            "family_name": self.FamilyName,
-            "family_name_non_latin": self.FamilyNameNonLatin,
-            "given_name": self.GivenName,
-            "given_name_non_latin": self.GivenNameNonLatin,
-            "additional_name": self.AdditionalName,
-            "additional_name_non_latin": self.AdditionalNameNonLatin,
-            "birth_name": self.BirthName,
-            "birth_name_non_latin": self.BirthNameNonLatin,
-            "date_of_birth": (
-                self.DateOfBirth.isoformat()
-                if isinstance(self.DateOfBirth, datetime.date)
-                else self.DateOfBirth
-            ),
-            "gender": self.Gender,
-            "nationality": self.Nationality,
-            "country_of_birth": self.CountryOfBirth,
-            "town_of_birth": self.TownOfBirth,
-            "country_of_residence": self.CountryOfResidence,
-        }
+        data: dict[str, Any] = {}
+        for name, alias in self._FIELD_ALIASES:
+            if name == "identifier":
+                data[alias] = self.identifier.value if self.identifier else None
+            else:
+                data[alias] = self._serialize_value(getattr(self, name))
+        return data
 
     @dict.setter
     def dict(self, d: Any) -> None:
         person = self.set_from_dict(d)
-        self.LevelOfAssurance = person.LevelOfAssurance
-        self.identifier = person.identifier
-        self.FamilyName = person.FamilyName
-        self.FamilyNameNonLatin = person.FamilyNameNonLatin
-        self.GivenName = person.GivenName
-        self.GivenNameNonLatin = person.GivenNameNonLatin
-        self.AdditionalName = person.AdditionalName
-        self.AdditionalNameNonLatin = person.AdditionalNameNonLatin
-        self.BirthName = person.BirthName
-        self.BirthNameNonLatin = person.BirthNameNonLatin
-        self.DateOfBirth = person.DateOfBirth
-        self.Gender = person.Gender
-        self.Nationality = person.Nationality
-        self.CountryOfBirth = person.CountryOfBirth
-        self.TownOfBirth = person.TownOfBirth
-        self.CountryOfResidence = person.CountryOfResidence
+        for name, _ in self._FIELD_ALIASES:
+            setattr(self, name, getattr(person, name))
 
     async def from_redis(self, redis, key):
         person = await get_person_from_redis(redis, key)
@@ -404,10 +302,13 @@ async def save_person_to_redis(redis_client, key: str, person: Person) -> None:
         key: Ключ Redis для збереження
         person: Об'єкт Person
     """
-    if not isinstance(person, Person):
-        raise TypeError(f"Очікувався Person, отримано {type(person).__name__}")
-
-    await redis_client.save_to_redis(key, person.dict)
+    await save_model_to_redis(
+        redis_client,
+        key,
+        person,
+        Person,
+        to_dict=lambda p: p.dict,
+    )
 
 
 async def get_person_from_redis(redis_client, key: str) -> Person | None:
@@ -421,20 +322,7 @@ async def get_person_from_redis(redis_client, key: str) -> Person | None:
     Returns:
         Person або None, якщо ключ відсутній
     """
-    data = await redis_client.get_from_redis(key)
-    if data is None:
-        return None
-
-    # Підтримка старого формату зі списком
-    if isinstance(data, list):
-        if not data:
-            return None
-        data = data[0]
-
-    if not isinstance(data, dict):
-        raise ValueError(f"Некоректний формат Person у Redis: {type(data).__name__}")
-
-    return _dict_to_person(data)
+    return await load_model_from_redis(redis_client, key, "Person", _dict_to_person)
 
 
 def _dict_to_person(data: dict) -> Person:

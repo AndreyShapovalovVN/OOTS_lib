@@ -18,8 +18,8 @@ __all__ = [
 class EMetadata(NS):
     def __init__(self):
         super().__init__()
-        self._xml: etree._Element = etree.Element(self._tname("sdg", "Evidence"), nsmap=self._ns)
-        etree.SubElement(self._xml, self._tname("sdg", "Identifier")).text = str(uuid.uuid4())
+        self._xml: etree._Element = self._element("sdg", "Evidence")
+        self._subelement(self._xml, "sdg", "Identifier", text=uuid.uuid4())
 
     def issuingAuthority(self, issuingAuthority: etree._Element):   # NOSONAR
         self._xml.append(issuingAuthority)
@@ -37,46 +37,56 @@ class EMetadata(NS):
 class IssuingAuthority(NS):
     def __init__(self, shema, value):
         super().__init__()
-        self._xml: etree._Element = etree.Element(self._tname("sdg", "IssuingAuthority"), nsmap=self._ns)
-        etree.SubElement(self._xml, self._tname("sdg", "Identifier"),
-                         attrib={'schemeID': shema}).text = f"{value}"
+        self._xml: etree._Element = self._element("sdg", "IssuingAuthority")
+        self._subelement(
+            self._xml, "sdg", "Identifier", text=value, attrib={"schemeID": shema}
+        )
 
     def name(self, lang: str, name: str):
-        etree.SubElement(self._xml, self._tname('sdg', 'Name'),
-                         attrib={'lang': f"{lang}".upper()}).text = f"{name}"
+        self._subelement(
+            self._xml, "sdg", "Name", text=name, attrib={"lang": f"{lang}".upper()}
+        )
         return self
 
 
 class Distribution(NS):
     def __init__(self, content_type):
         super().__init__()
-        self._xml: etree._Element = etree.Element(self._tname("sdg", "Distribution"), nsmap=self._ns)
-        etree.SubElement(self._xml, self._tname("sdg", "Format")).text = content_type
+        self._xml: etree._Element = self._element("sdg", "Distribution")
+        self._subelement(self._xml, "sdg", "Format", text=content_type)
 
     def ConformsTo(self, url):
-        etree.SubElement(self._xml, self._tname("sdg", "ConformsTo")).text = url
+        self._subelement(self._xml, "sdg", "ConformsTo", text=url)
 
     def Transformation(self, url):
-        etree.SubElement(self._xml, self._tname("sdg", "Transformation")).text = url
+        self._subelement(self._xml, "sdg", "Transformation", text=url)
 
 
 class IsConformantTo(NS):
     def __init__(self, conformance):
         super().__init__()
-        self._xml: etree._Element = etree.Element(self._tname("sdg", "IsConformantTo"), nsmap=self._ns)
-        etree.SubElement(self._xml, self._tname("sdg", "EvidenceTypeClassification")).text = conformance
+        self._xml: etree._Element = self._element("sdg", "IsConformantTo")
+        self._subelement(
+            self._xml, "sdg", "EvidenceTypeClassification", text=conformance
+        )
 
     def title(self, lang, title):
-        etree.SubElement(self._xml, self._tname('sdg', 'Title'),
-                         attrib={'lang': lang.upper}).text = title
+        self._subelement(
+            self._xml, "sdg", "Title", text=title, attrib={"lang": lang.upper()}
+        )
 
     def description(self, lang, description):
-        etree.SubElement(self._xml, self._tname('sdg', 'Description'),
-                         attrib={'lang': lang.upper}).text = description
+        self._subelement(
+            self._xml,
+            "sdg",
+            "Description",
+            text=description,
+            attrib={"lang": lang.upper()},
+        )
 
 
 class IsAbout(NS):
     def __init__(self, person: etree._Element):
         super().__init__()
-        self._xml: etree._Element = etree.Element(self._tname("sdg", "IsAbout"), nsmap=self._ns)
+        self._xml: etree._Element = self._element("sdg", "IsAbout")
         self._xml.append(person)
