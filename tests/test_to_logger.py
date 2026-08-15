@@ -2,7 +2,7 @@ import httpx
 import pytest
 
 import oots_lib.lib.toLogger as to_logger_module
-from oots_lib.lib.toLogger import LoggerServiceError, ToLogger
+from oots_lib.lib.toLogger import ToLogger
 
 
 class FakeResponse:
