@@ -13,8 +13,8 @@ from oots_lib.import_env import import_env
 
 _logger = logging.getLogger(__name__)
 
-REDIS_URL = import_env("REDIS_URL")
-TTL = int(import_env("REDIS_TTL" ))
+REDIS_URL = import_env("REDIS_URL", "redis://localhost:6379/0")
+TTL = int(import_env("REDIS_TTL", "3600"))
 REDIS_PREFIX = import_env("REDIS_PREFIX", "")
 REDIS_TIMEOUT = int(import_env("REDIS_TIMEOUT", "6"))
 
@@ -325,7 +325,7 @@ class UseRedisAsync:
             _logger.debug("Redis здоров'я: OK")
             return True
         except Exception as e:
-            _logger.warning(f"Redis недоступний: {e}")
+            _logger.exception(f"Redis недоступний: {e}")
             return False
 
     async def health_check(self) -> bool:
@@ -359,7 +359,7 @@ class UseRedisAsync:
             if inspect.isawaitable(close_result):
                 await close_result
         except Exception as e:
-            _logger.warning(f"Помилка при закритті Redis: {e}", exc_info=e)
+            _logger.exception(f"Помилка при закритті Redis: {e}", exc_info=e)
             return
         _logger.debug("Redis з'єднання закрито")
 
