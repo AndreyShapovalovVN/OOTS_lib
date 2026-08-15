@@ -15,8 +15,8 @@ import httpx
 from lxml import etree
 from pyRegRep4.RIMParsing import Parsing  # type: ignore[import-untyped]
 
-from oots_lib.models.Person import Person
 from oots_lib.import_env import import_env
+from oots_lib.models.Person import Person
 
 _logger = logging.getLogger(__name__)
 
