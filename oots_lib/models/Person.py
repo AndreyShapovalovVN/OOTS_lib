@@ -13,7 +13,7 @@ from oots_lib.models.Base import Base, MainBase
 
 _logger = logging.getLogger(__name__)
 
-COUNTRY = import_env("COUNTRY")
+COUNTRY = import_env("COUNTRY", "UA")
 
 __all__ = [
     "Identifier",
