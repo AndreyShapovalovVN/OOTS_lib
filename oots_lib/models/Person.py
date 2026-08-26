@@ -155,7 +155,7 @@ class Person(MainBase, NS):
     def _serialize_value(value: Any) -> Any:
         return value.isoformat() if isinstance(value, datetime.date) else value
 
-    @property
+    @property  # type: ignore[override]
     def xml(self) -> str:
         return self.get_xml()
 
