@@ -1,7 +1,7 @@
 import datetime
 import logging
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, ClassVar
 
 from lxml import etree
 
@@ -74,7 +74,7 @@ class Identifier(Base, NS):
 
 
 @dataclass
-class Person(MainBase, NS):
+class Person(MainBase):
     LevelOfAssurance: str = "High"
     identifier: Identifier | None = None  # РНОКПП
     FamilyName: str | None = None  # Призвище
@@ -93,6 +93,7 @@ class Person(MainBase, NS):
     CountryOfResidence: str | None = None
     _xml: etree._Element | None = field(init=False, repr=False, default=None)
     _ns = {"sdg": "http://data.europa.eu/p4s"}  # NOSONAR
+    _xml_helper: ClassVar[NS] = NS()
 
     # Поля з атрибутом nonLatin: значення у `<Name>`, транслітерація у `NameNonLatin`.
     _NAME_FIELDS = ("FamilyName", "GivenName", "AdditionalName", "BirthName")
@@ -155,7 +156,7 @@ class Person(MainBase, NS):
     def _serialize_value(value: Any) -> Any:
         return value.isoformat() if isinstance(value, datetime.date) else value
 
-    @property  # type: ignore[override]
+    @property
     def xml(self) -> str:
         return self.get_xml()
 
@@ -192,16 +193,16 @@ class Person(MainBase, NS):
         return self.get_element()
 
     def get_element(self) -> etree._Element:
-        root = self._element("sdg", "Person")
+        root = self._xml_helper._element("sdg", "Person", nsmap=self._ns)
 
-        self._subelement(root, "sdg", "LevelOfAssurance", text=self.LevelOfAssurance)
+        self._xml_helper._subelement(root, "sdg", "LevelOfAssurance", text=self.LevelOfAssurance)
 
         if self.identifier is not None and self.identifier.value:
             root.append(self.identifier.get_element(sdg=True))
 
         for name in self._NAME_FIELDS:
             non_latin = getattr(self, f"{name}NonLatin")
-            self._subelement(
+            self._xml_helper._subelement(
                 root,
                 "sdg",
                 name,
@@ -209,10 +210,10 @@ class Person(MainBase, NS):
                 attrib={"nonLatin": non_latin} if non_latin else None,
             )
 
-        self._subelement(root, "sdg", "DateOfBirth", text=self.DateOfBirth)
+        self._xml_helper._subelement(root, "sdg", "DateOfBirth", text=self.DateOfBirth)
 
         for tag in self._TEXT_FIELDS:
-            self._subelement(root, "sdg", tag, text=getattr(self, tag))
+            self._xml_helper._subelement(root, "sdg", tag, text=getattr(self, tag))
 
         self._xml = root
         return root

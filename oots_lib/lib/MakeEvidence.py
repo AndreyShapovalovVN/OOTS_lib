@@ -13,9 +13,9 @@ from oots_lib.lib.EvidanceMetadata import (
     IsConformantTo,
     IssuingAuthority,
 )
-from oots_lib.lib.UseRedis import UseRedisAsync as Redis
 from oots_lib.lib.exception import EDMException
 from oots_lib.lib.toLogger import ToLogger
+from oots_lib.lib.UseRedis import UseRedisAsync as Redis
 from oots_lib.models.Base import MainBase
 from oots_lib.models.Person import Person, get_person_from_redis
 from oots_lib.models.RequestEDM import get_edm_request_from_redis
