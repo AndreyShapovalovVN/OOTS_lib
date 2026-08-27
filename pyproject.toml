@@ -13,6 +13,7 @@ dependencies = [
     "pyregrep>=14",
     "pyxroad>=1.5.10",
     "redis>=8.1.0",
+    "pyRegRep>=14",
 ]
 
 [project.optional-dependencies]

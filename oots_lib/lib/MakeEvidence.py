@@ -2,7 +2,7 @@ import base64
 import logging
 from dataclasses import is_dataclass
 
-from pyRegRep4 import deep_get
+from pyRegRep4.utils import deep_get
 from pyRegRep4.RIMParsing import Parsing
 
 from oots_lib.import_env import import_env
