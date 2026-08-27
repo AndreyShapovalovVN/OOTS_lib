@@ -2,8 +2,8 @@ import base64
 import logging
 from dataclasses import is_dataclass
 
-from pyRegRep4.utils import deep_get
 from pyRegRep4.RIMParsing import Parsing
+from pyRegRep4.utils import deep_get
 
 from oots_lib.import_env import import_env
 from oots_lib.lib.EvidanceMetadata import (
@@ -13,9 +13,9 @@ from oots_lib.lib.EvidanceMetadata import (
     IsConformantTo,
     IssuingAuthority,
 )
+from oots_lib.lib.UseRedis import UseRedisAsync as Redis
 from oots_lib.lib.exception import EDMException
 from oots_lib.lib.toLogger import ToLogger
-from oots_lib.lib.UseRedis import UseRedisAsync as Redis
 from oots_lib.models.Base import MainBase
 from oots_lib.models.Person import Person, get_person_from_redis
 from oots_lib.models.RequestEDM import get_edm_request_from_redis
@@ -158,8 +158,8 @@ class MakeEvidence:
             )
 
         distribution = Distribution(self.request_content_type)
-        conformantTo = IsConformantTo(self.CONFORMANT_TO_URL)     # NOSONAR
-        usingAuthority = IssuingAuthority(self.ISSUING_AUTHORITY_SCHEME, self.ISSUING_AUTHORITY_ID)     # NOSONAR
+        conformantTo = IsConformantTo(self.CONFORMANT_TO_URL)  # NOSONAR
+        usingAuthority = IssuingAuthority(self.ISSUING_AUTHORITY_SCHEME, self.ISSUING_AUTHORITY_ID)  # NOSONAR
         usingAuthority.name(lang='UA', name=self.ISSUING_AUTHORITY_NAME)
         about = IsAbout(person_tree)
 
