@@ -7,7 +7,6 @@ _logger = logging.getLogger(__name__)
 def import_env(key: str, default: str | None = None) -> str:
     is_test = os.getenv("IS_TEST") == "true"
     if is_test:
-        _logger.warning("!!! Environment variable %s is not set!", key)
         default = default or ""
 
     value = os.getenv(key, default)
