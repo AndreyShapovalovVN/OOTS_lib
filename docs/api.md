@@ -49,6 +49,9 @@ from oots_lib.models import save_person_to_redis, get_person_from_redis
 
 Похідні від `MainBase` моделі документів отримують `get_xml()`, `get_dict()`,
 `get_json()` і `get_pdf(xslt_file, css=None)`; підклас має реалізувати `get_element()`.
+Поле `_name_` задає зовнішній ключ JSON: `Person(_name_="person").get_json()`
+повертає `{"person": {інші поля}}`. Якщо `_name_` — `None` або порожній рядок,
+JSON містить поля без обгортки. Службове поле `_name_` не входить до `get_dict()`.
 
 ## MakeEvidence
 

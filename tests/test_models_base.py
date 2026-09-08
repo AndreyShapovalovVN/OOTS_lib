@@ -11,12 +11,12 @@ from oots_lib.models.Base import Base, MainBase
 
 @dataclass
 class Sample(MainBase):
-    name: str = "Іван"
+    given_name: str = "Іван"
     active: bool = True
 
     def get_element(self) -> etree._Element:
         root = etree.Element("Sample")
-        self._set_text(etree.SubElement(root, "name"), self.name)
+        self._set_text(etree.SubElement(root, "name"), self.given_name)
         self._set_text(etree.SubElement(root, "active"), self.active)
         return root
 
@@ -83,9 +83,9 @@ def test_get_xml_serializes_element():
 
 
 def test_get_dict_and_get_json():
-    sample = Sample(name="Ivan", active=False)
-    assert sample.get_dict() == {"name": "Ivan", "active": False}
-    assert json.loads(sample.get_json()) == {"name": "Ivan", "active": False}
+    sample = Sample(given_name="Ivan", active=False)
+    assert sample.get_dict() == {"given_name": "Ivan", "active": False}
+    assert json.loads(sample.get_json()) == {"given_name": "Ivan", "active": False}
 
 
 def test_get_json_keeps_non_ascii_and_serializes_dates():
@@ -117,3 +117,29 @@ def test_get_pdf_delegates_to_generator(monkeypatch):
     assert captured["rdf"] == sample.get_xml()
     assert captured["xslt_file"] == "style.xsl"
     assert captured["css"] == ["body {}"]
+
+
+@pytest.mark.parametrize("name", [None, "", "Документ"])
+def test_get_json_optional_name(name):
+    sample = Sample(_name_=name)
+    fields = {"given_name": "Іван", "active": True}
+    assert sample.get_dict() == fields
+    assert json.loads(sample.get_json()) == ({name: fields} if name else fields)
+
+
+def test_get_json_name_with_overridden_get_dict():
+    from oots_lib.models.Person import Person
+
+    person = Person(_name_="Person", GivenName="Іван")
+    assert json.loads(person.get_json()) == {"Person": person.get_dict()}
+
+
+def test_main_base_name_allows_required_subclass_fields():
+    @dataclass
+    class Required(MainBase):
+        value: int
+
+        def get_element(self):
+            return etree.Element("Required")
+
+    assert json.loads(Required(7, _name_="record").get_json()) == {"record": {"value": 7}}

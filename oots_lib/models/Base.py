@@ -3,7 +3,7 @@ import json
 import pathlib
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 
 from lxml import etree
 
@@ -13,6 +13,7 @@ from oots_lib.lib.xml_utils import set_element_text
 
 @dataclass
 class Base(ABC):
+
     @staticmethod
     def _set_text(element: etree._Element, value) -> None:
         set_element_text(element, value)
@@ -40,6 +41,8 @@ class Base(ABC):
 
 @dataclass
 class MainBase(Base):
+    _name_: str | None = field(default=None, kw_only=True)
+
     @classmethod
     def set_from_dict(cls, data: dict):
         raise NotImplementedError(
@@ -55,10 +58,15 @@ class MainBase(Base):
         return xml_bytes.decode("utf-8")
 
     def get_dict(self) -> dict:
-        return asdict(self)
+        data = asdict(self)
+        data.pop("_name_", None)
+        return data
 
     def get_json(self) -> str:
-        return json.dumps(self.get_dict(), default=str, ensure_ascii=False)
+        data = self.get_dict()
+        if self._name_:
+            data = {self._name_: data}
+        return json.dumps(data, default=str, ensure_ascii=False)
 
     def get_pdf(
         self,
