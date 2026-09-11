@@ -1060,15 +1060,15 @@ wheels = [
 
 [[package]]
 name = "pyregrep"
-version = "14"
+version = "15"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "lxml" },
     { name = "xmltodict" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/8d/f9/d057d60b3ebbc457f7b4ee13def0262296154db04351814bd0362fb97baf/pyregrep-14.tar.gz", hash = "sha256:1838694d202f991a405427c0b68621955a19db396298ecde6c90cc8177e525c1", size = 21754, upload-time = "2026-06-16T13:06:58.748Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/92/b4/703f03cd15c91606a0cc2a87facf106e64d7490e0ffc61241a4356869509/pyregrep-15.tar.gz", hash = "sha256:316bfda4ce123c57d45e33da724cef5f6fb555dafcb9f4e24501cccd3d29e0e7", size = 22391, upload-time = "2026-09-07T09:32:23.092Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0f/73/36c2e2d74569e956740ef10131beb7d902acaf879eb7b63250b35cbf35ff/pyregrep-14-py3-none-any.whl", hash = "sha256:a124197c74f033a63ac2356878037c396b5629ce45ed157f3a6508aedda9e876", size = 15026, upload-time = "2026-06-16T13:06:57.486Z" },
+    { url = "https://files.pythonhosted.org/packages/c0/5c/b6f512f74395b7d8a6c82e2c32701153a1760dafd307a635ae55f4eb0d18/pyregrep-15-py3-none-any.whl", hash = "sha256:d0437437699603665b6301cfd64756118151f96eb4ffe26cc9b7b745b825f74b", size = 15263, upload-time = "2026-09-07T09:32:21.98Z" },
 ]
 
 [[package]]
