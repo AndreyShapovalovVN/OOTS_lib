@@ -16,6 +16,7 @@ TREMBITA_URL = import_env("TREMBITA_URL")
 TREMBITA_CLIENT_ID = import_env("TREMBITA_CLIENT_ID")
 TREMBITA_CACHE = int(import_env("TREMBITA_CACHE"))
 REDIS_URL = import_env("REDIS_URL")
+SOAP_CACHE_TTL = int(import_env("SOAP_CACHE_TTL", default=str(3600 * 24)))
 
 
 class SOAPTransport(ABC):
@@ -29,8 +30,12 @@ class SOAPTransport(ABC):
 
         _logger.info(f"Надсилаємо запит до сервісу: {self.service}")
 
-        cache = RedisCache(REDIS_URL, timeout=3600 * 24)
-        transport = Transport(operation_timeout=60 * 5, cache=cache)
+        cache = RedisCache(REDIS_URL, timeout=SOAP_CACHE_TTL)
+        transport = Transport(
+            operation_timeout=60 * 5,
+            timeout=60 * 5,
+            cache=cache
+        )
         self.history = UXPHistoryPlugin()
 
         self.client = None
