@@ -7,7 +7,7 @@ from XRoad.plugins import UXPHistoryPlugin
 
 from oots_lib.import_env import import_env
 from oots_lib.lib.exception import EDMException, TransportError
-from oots_lib.lib.toLogger import ToLogger
+from oots_lib.lib.toLogger import TraceabilityLogger, build_trembita_payload
 from oots_lib.lib.UseRedis import get_redis_client
 
 _logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ class SOAPTransport(ABC):
         self.conversation_id = conversation_id
         self.if_send_error = if_send_error
 
-        self.to_logger = ToLogger(conversation_id)
+        self.trembita_payload: dict | None = build_trembita_payload(conversation_id)
         self.redis = get_redis_client()
 
         _logger.info(f"Надсилаємо запит до сервісу: {self.service}")
@@ -124,21 +124,19 @@ class SOAPTransport(ABC):
         return self.parsing_response(result)
 
     def _logging_trembita_transaction(self):
-        if self.to_logger is None or self.client is None or self.history is None:
-            _logger.debug("Журналювання транзакції пропущено: відсутні client/history або логер")
+        if self.trembita_payload is None or self.client is None or self.history is None:
+            _logger.debug("Журналювання транзакції пропущено: відсутні client/history або payload")
             return
 
-        self.to_logger.append_calls(
-            {
-                "dataservice": self.service,
-                "timestamp": self.history.transaction_date.isoformat(),
-                "trembita_msg_id": self.client.id,
-                "transaction_id": self.history.transaction_id,
-            }
-        )
+        self.trembita_payload["calls"].append({
+            "dataservice": self.service,
+            "timestamp": self.history.transaction_date.isoformat(),
+            "trembita_msg_id": self.client.id,
+            "transaction_id": self.history.transaction_id,
+        })
 
-        _logger.debug(f"Дані журналу транзакції: {self.to_logger.payload}")
+        _logger.debug(f"Дані журналу транзакції: {self.trembita_payload}")
         try:
-            self.to_logger.send_to_logger()
+            TraceabilityLogger(raise_on_error=True).log_trembita_sync(self.trembita_payload)
         except Exception:
             _logger.exception("Не вдалося надіслати журнал транзакції")

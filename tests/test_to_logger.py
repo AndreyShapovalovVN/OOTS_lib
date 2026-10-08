@@ -2,7 +2,7 @@ import httpx
 import pytest
 
 import oots_lib.lib.toLogger as to_logger_module
-from oots_lib.lib.toLogger import ToLogger
+from oots_lib.lib.toLogger import TraceabilityLogger, build_trembita_payload
 
 
 class FakeResponse:
@@ -22,11 +22,12 @@ class FakeResponse:
 
 
 @pytest.fixture
-def fake_post(monkeypatch):
+def fake_request(monkeypatch):
     calls: list[dict] = []
 
-    def factory(url, *, headers=None, json=None, timeout=None):
+    def factory(method, url, *, headers=None, json=None, timeout=None):
         calls.append({
+            "method": method,
             "url": url,
             "headers": headers,
             "json": json,
@@ -34,35 +35,42 @@ def fake_post(monkeypatch):
         })
         return FakeResponse()
 
-    monkeypatch.setattr(to_logger_module.httpx, "post", factory)
+    monkeypatch.setattr(to_logger_module.httpx, "request", factory)
     return calls
 
 
-def test_payload_initialized_with_conversation_id():
-    logger = ToLogger("conv-1")
-    assert logger.payload == {"conversation_id": "conv-1", "calls": []}
+def test_build_trembita_payload_initialized_with_conversation_id():
+    payload = build_trembita_payload("conv-1")
+    assert payload == {"conversation_id": "conv-1", "calls": []}
 
 
-def test_append_calls_is_chainable():
-    logger = ToLogger("conv-1")
+def test_log_trembita_sync_posts_payload(fake_request):
+    payload = build_trembita_payload("conv-1")
+    payload["calls"].append({"dataservice": "svc"})
+    logger = TraceabilityLogger()
 
-    result = logger.append_calls({"a": 1}).append_calls({"b": 2})
-
-    assert result is logger
-    assert logger.payload["calls"] == [{"a": 1}, {"b": 2}]
-
-
-def test_send_to_logger_posts_payload(fake_post):
-    logger = ToLogger("conv-1").append_calls({"dataservice": "svc"})
-
-    logger.send_to_logger()
-
-    assert len(fake_post) == 1
-    call = fake_post[0]
+    assert logger.log_trembita_sync(payload) is True
+    assert len(fake_request) == 1
+    call = fake_request[0]
+    assert call["method"] == "POST"
     assert call["url"] == f"{to_logger_module.TraceabilityLogger().base_url}/logs/trembita"
     assert call["headers"] == {
         "X-API-Key": to_logger_module.TraceabilityLogger().api_key,
         "Content-Type": "application/json",
     }
-    assert call["json"] == logger.payload
+    assert call["json"] == payload
     assert call["timeout"] == 30.0
+
+
+def test_log_trembita_sync_normalizes_non_serializable_values(fake_request):
+    class SubmitResponse:
+        def __str__(self) -> str:
+            return "submitResponse(id=abc)"
+
+    payload = build_trembita_payload("conv-1")
+    payload["calls"].append({"raw_response": SubmitResponse()})
+    logger = TraceabilityLogger()
+
+    assert logger.log_trembita_sync(payload) is True
+    call = fake_request[0]
+    assert call["json"]["calls"][0]["raw_response"] == "submitResponse(id=abc)"

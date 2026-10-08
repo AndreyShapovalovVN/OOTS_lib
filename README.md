@@ -13,6 +13,7 @@ System) через українську платформу взаємодії **
 
 - [Публічний API](docs/api.md)
 - [Модель обробки помилок](docs/error-handling.md)
+- [Інструкція з Traceability Logger](docs/toLogger.md)
 
 ## Встановлення
 
@@ -100,7 +101,7 @@ documents = service.response({"person": {"rnokpp": "1234567890"}})
 
 Кожна помилка транспорту завершується виключенням (див.
 [обробку помилок](docs/error-handling.md)); успішний виклик додатково журналюється до
-сервісу обміну через `ToLogger`.
+сервісу обміну через `TraceabilityLogger.log_trembita_sync()`.
 
 ## Схема ключів Redis
 

@@ -41,21 +41,17 @@ class FakeXClient:
         return self.response
 
 
-class FakeToLogger:
-    def __init__(self, conversation_id):
-        self.conversation_id = conversation_id
-        self.payload = {"conversation_id": conversation_id, "calls": []}
-        self.sent = 0
-        self.send_error: Exception | None = None
+class FakeTraceabilityLogger:
+    sent = 0
+    send_error: Exception | None = None
 
-    def append_calls(self, calls):
-        self.payload["calls"].append(calls)
-        return self
+    def __init__(self, *args, **kwargs):
+        ...
 
-    def send_to_logger(self):
-        self.sent += 1
-        if self.send_error is not None:
-            raise self.send_error
+    def log_trembita_sync(self, payload):
+        type(self).sent += 1
+        if type(self).send_error is not None:
+            raise type(self).send_error
 
 
 class Service(SOAPTransport):
@@ -67,6 +63,8 @@ class Service(SOAPTransport):
 def transport_env(monkeypatch):
     redis = RedisSpy()
     created: dict = {}
+    FakeTraceabilityLogger.sent = 0
+    FakeTraceabilityLogger.send_error = None
 
     def client_factory(*args, **kwargs):
         client = FakeXClient(*args, **kwargs)
@@ -77,7 +75,7 @@ def transport_env(monkeypatch):
     monkeypatch.setattr(transport_module, "RedisCache", lambda *a, **k: object())
     monkeypatch.setattr(transport_module, "Transport", lambda *a, **k: object())
     monkeypatch.setattr(transport_module, "UXPHistoryPlugin", FakeHistory)
-    monkeypatch.setattr(transport_module, "ToLogger", FakeToLogger)
+    monkeypatch.setattr(transport_module, "TraceabilityLogger", FakeTraceabilityLogger)
     monkeypatch.setattr(transport_module, "get_redis_client", lambda: redis)
     created["redis"] = redis
     return created
@@ -148,8 +146,8 @@ def test_response_returns_parsed_body_and_logs_transaction(transport_env):
 
     assert result == [{"parsed": {"result": 1}}]
     assert service.client.requests == [{"query": "value"}]
-    assert service.to_logger.sent == 1
-    assert service.to_logger.payload["calls"] == [
+    assert FakeTraceabilityLogger.sent == 1
+    assert service.trembita_payload["calls"] == [
         {
             "dataservice": "GetDocuments",
             "timestamp": "2024-05-01T12:00:00",
@@ -177,15 +175,15 @@ def test_response_raises_edm_exception_on_malformed_body(transport_env):
 
 def test_logging_transaction_skipped_without_logger(transport_env):
     service = Service("GetDocuments", "conv-1")
-    service.to_logger = None
+    service.trembita_payload = None
 
     service._logging_trembita_transaction()
 
 
 def test_logging_transaction_swallows_logger_errors(transport_env):
     service = Service("GetDocuments", "conv-1")
-    service.to_logger.send_error = RuntimeError("logger down")
+    FakeTraceabilityLogger.send_error = RuntimeError("logger down")
 
     service._logging_trembita_transaction()
 
-    assert service.to_logger.sent == 1
+    assert FakeTraceabilityLogger.sent == 1

@@ -14,7 +14,6 @@ from oots_lib.lib.EvidanceMetadata import (
     IssuingAuthority,
 )
 from oots_lib.lib.exception import EDMException
-from oots_lib.lib.toLogger import ToLogger
 from oots_lib.lib.UseRedis import UseRedisAsync as Redis
 from oots_lib.models.Base import MainBase
 from oots_lib.models.Person import Person, get_person_from_redis
@@ -52,7 +51,6 @@ class MakeEvidence:
         self.request: Parsing | None = None
         self.as4: dict | None | None = None
 
-        self.log: ToLogger | None | None = None
         self.evidence: Evidences | None = None
         self._request_content_type: str | None = None
 

@@ -81,7 +81,7 @@ def send_error_message(self, code, message, detail, cause=None) -> NoReturn:
 Метод викликається, якщо не створено `XClient`, якщо запит до Трембіти впав або якщо
 відповідь має неочікувану структуру.
 
-Виняток — журналювання транзакції: збій `ToLogger` не скасовує вже виконаний обмін
+Виняток — журналювання транзакції: збій `TraceabilityLogger` не скасовує вже виконаний обмін
 даними, тому він лише журналюється через `logger.exception`.
 
 ## Redis
@@ -97,7 +97,7 @@ def send_error_message(self, code, message, detail, cause=None) -> NoReturn:
 
 ## Сервіс журналювання
 
-`ToLogger.send_to_logger()` кидає `LoggerServiceError` і для мережевих помилок
+`TraceabilityLogger.log_trembita_sync()` кидає `LoggerServiceError` і для мережевих помилок
 (`httpx.HTTPError`), і для відповіді зі статусом помилки. Тексти помилок не містять
 API-ключа.
 

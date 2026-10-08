@@ -1,7 +1,7 @@
 """Client library for the OOTS Traceability Logger service.
 
-Use :class:`TraceabilityLogger` in new code.  The compatibility API at the
-bottom of this module is retained temporarily for existing services.
+Use :class:`TraceabilityLogger` for request/response/trembita logging and
+the payload builder helpers for schema-compliant bodies.
 """
 
 from __future__ import annotations
@@ -76,20 +76,25 @@ class TraceabilityLogger:
 
     async def health(self) -> bool:
         """Return whether the logger and its database are available."""
-        try:
-            response = await self._request("GET", "/health")
-            return response is not None and response.status_code == httpx.codes.OK
-        except LoggerServiceError:
-            return False
+        response = await self._request("GET", "/health")
+        return response is not None and response.status_code == httpx.codes.OK
 
     async def log_request(self, payload: Mapping[str, Any]) -> bool:
-        return await self._post("request", payload)
+        response = await self._request("POST", "/logs/request", json=dict(payload))
+        return response is not None and response.is_success
 
     async def log_trembita(self, payload: Mapping[str, Any]) -> bool:
-        return await self._post("trembita", payload)
+        response = await self._request("POST", "/logs/trembita", json=dict(payload))
+        return response is not None and response.is_success
 
     async def log_response(self, payload: Mapping[str, Any]) -> bool:
-        return await self._post("response", payload)
+        response = await self._request("POST", "/logs/response", json=dict(payload))
+        return response is not None and response.is_success
+
+    def log_trembita_sync(self, payload: Mapping[str, Any]) -> bool:
+        """Synchronous Trembita logging for call sites without an event loop."""
+        response = self._request_sync("POST", "/logs/trembita", json=dict(payload))
+        return response is not None and response.is_success
 
     def log_in_background(
             self,
@@ -106,12 +111,12 @@ class TraceabilityLogger:
         behaviour is desired.
         """
         task = asyncio.create_task(
-            self._log_when_available(kind, dict(payload), check_health=check_health)
+            self._log_in_background(kind, dict(payload), check_health=check_health)
         )
         task.add_done_callback(_report_background_failure)
         return task
 
-    async def _log_when_available(
+    async def _log_in_background(
             self,
             kind: LogKind,
             payload: Mapping[str, Any],
@@ -121,13 +126,12 @@ class TraceabilityLogger:
         if check_health and not await self.health():
             _logger.warning("Traceability Logger is unavailable; %s log was skipped", kind)
             return False
-        return await self._post(kind, payload)
-
-    async def _post(self, kind: LogKind, payload: Mapping[str, Any]) -> bool:
         response = await self._request("POST", f"/logs/{kind}", json=dict(payload))
         return response is not None and response.is_success
 
     async def _request(self, method: str, path: str, **kwargs: Any) -> httpx.Response | None:
+        if "json" in kwargs:
+            kwargs["json"] = _make_json_safe(kwargs["json"])
         owns_client = self._client is None
         client = self._client or httpx.AsyncClient(
             timeout=self.timeout,
@@ -147,6 +151,42 @@ class TraceabilityLogger:
         finally:
             if owns_client:
                 await client.aclose()
+
+    def _request_sync(self, method: str, path: str, **kwargs: Any) -> httpx.Response | None:
+        if "json" in kwargs:
+            kwargs["json"] = _make_json_safe(kwargs["json"])
+        try:
+            response = httpx.request(
+                method,
+                f"{self.base_url}{path}",
+                headers=self.headers,
+                timeout=self.timeout,
+                **kwargs,
+            )
+            response.raise_for_status()
+            _logger.debug("Traceability Logger %s %s: %s", method, path, response.status_code)
+            return response
+        except httpx.HTTPError as exc:
+            error = LoggerServiceError(f"Traceability Logger {method} {path} failed: {exc}")
+            if self.raise_on_error:
+                raise error from exc
+            _logger.warning("%s", error)
+            return None
+
+
+def _make_json_safe(value: Any) -> Any:
+    """Convert values to JSON-serializable structures for logging payloads."""
+    if value is None or isinstance(value, (bool, int, float, str)):
+        return value
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    if isinstance(value, etree._Element):
+        return etree.tostring(value, encoding="unicode")
+    if isinstance(value, Mapping):
+        return {str(key): _make_json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [_make_json_safe(item) for item in value]
+    return str(value)
 
 
 def agent_identifier(agent: etree._Element | None) -> tuple[str | None, str | None]:
@@ -187,6 +227,11 @@ def build_request_payload(as4: Mapping[str, Any], edm: Parsing) -> dict[str, Any
         "mime_type": "application/x-ebrs+xml",
         "mime_content": etree.tostring(edm.doc, encoding="unicode"),
     }
+
+
+def build_trembita_payload(conversation_id: str) -> dict[str, Any]:
+    """Build a ``TrembitaLogCreate`` payload with an empty calls list."""
+    return {"conversation_id": conversation_id, "calls": []}
 
 
 def build_response_payload(
@@ -234,99 +279,3 @@ def _report_background_failure(task: asyncio.Task[Any]) -> None:
         _logger.debug("Background Traceability Logger task was cancelled")
     except Exception:
         _logger.exception("Background Traceability Logger task failed")
-
-
-# ---------------------------------------------------------------------------
-# LEGACY COMPATIBILITY API
-# Keep only while callers migrate to TraceabilityLogger and build_*_payload.
-# ---------------------------------------------------------------------------
-
-
-def agent_identifire(agent: etree._Element | None) -> tuple[str | None, str | None]:
-    """LEGACY: misspelled alias; use :func:`agent_identifier`."""
-    return agent_identifier(agent)
-
-
-async def to_logger(
-        payload: dict[str, Any],
-        endpoint: LogKind | None = None,
-) -> bool:
-    """LEGACY: use ``TraceabilityLogger.log_<endpoint>()`` directly."""
-    if endpoint is None:
-        if "calls" in payload:
-            endpoint = "trembita"
-        elif "request_id" in payload or "response_identifier_slot" in payload:
-            endpoint = "response"
-        else:
-            endpoint = "request"
-    client = TraceabilityLogger()
-    return await getattr(client, f"log_{endpoint}")(payload)
-
-
-async def to_request(as4: dict[str, Any], edm: Parsing) -> asyncio.Task[Any]:
-    await asyncio.sleep(0)  # Yield control to ensure the caller can await the returned task
-    """LEGACY: health-check and submit a request log in the background."""
-    return TraceabilityLogger().log_in_background(
-        "request",
-        build_request_payload(as4, edm),
-    )
-
-
-async def check_service() -> bool:
-    """LEGACY: use :meth:`TraceabilityLogger.health`."""
-    return await TraceabilityLogger().health()
-
-
-async def check_servis() -> bool:
-    """LEGACY: misspelled alias; use :meth:`TraceabilityLogger.health`."""
-    return await check_service()
-
-
-class ToLogger:
-    """LEGACY adapter combining the former response and Trembita builders.
-
-    New code should create an explicit payload and call TraceabilityLogger.
-    """
-
-    def __init__(self, value: str | Mapping[str, Any], edm: bytes | str | None = None):
-        if edm is None:
-            self.payload: dict[str, Any] = {"conversation_id": str(value), "calls": []}
-            self._kind: LogKind = "trembita"
-        else:
-            self.payload = build_response_payload(value, edm)  # type: ignore[arg-type]
-            self._kind = "response"
-
-    def append_calls(self, calls: dict[str, Any]) -> ToLogger:
-        self.payload.setdefault("calls", []).append(calls)
-        return self
-
-    def message_id(self, value: str) -> ToLogger:
-        self.payload["message_id"] = value
-        return self
-
-    def evidence_items(self, value: dict[str, Any]) -> ToLogger:
-        self.payload.setdefault("evidense_items", []).append(value)
-        return self
-
-    def evidence_person(self, value: dict[str, Any]) -> ToLogger:
-        self.payload["person"] = value
-        return self
-
-    async def send(self) -> bool:
-        """LEGACY async sender for either response or Trembita payloads."""
-        client = TraceabilityLogger()
-        return await getattr(client, f"log_{self._kind}")(self.payload)
-
-    def send_to_logger(self) -> None:
-        """LEGACY synchronous Trembita sender; prefer ``await send()``."""
-        client = TraceabilityLogger(raise_on_error=True)
-        try:
-            response = httpx.post(
-                f"{client.base_url}/logs/{self._kind}",
-                headers=client.headers,
-                json=self.payload,
-                timeout=client.timeout,
-            )
-            response.raise_for_status()
-        except httpx.HTTPError as exc:
-            raise LoggerServiceError(f"Traceability Logger request failed: {exc}") from exc
