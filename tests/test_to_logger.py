@@ -10,6 +10,10 @@ class FakeResponse:
         self.status_code = status_code
         self.text = text
 
+    @property
+    def is_success(self) -> bool:
+        return 200 <= self.status_code < 300
+
     def raise_for_status(self):
         if self.status_code >= 400:
             request = httpx.Request("POST", "https://logger.local/logs/trembita")
