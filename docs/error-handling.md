@@ -13,7 +13,7 @@
 | `ReportingError` | `oots_lib.libs.exception` | Не вдалося опублікувати `EDMException` до Redis або черги |
 | `RedisDataError` | `oots_lib.libs.UseRedis` | Значення у Redis не є валідним JSON |
 | `KeyIsNone` | `oots_lib.libs.UseRedis` | Ключ Redis передано як `None` |
-| `LoggerServiceError` | `oots_lib.libs.toLogger` | Сервіс журналювання недоступний або повернув HTTP-помилку |
+| `LoggerServiceError` | `oots_lib.lib.toLogger` | Сервіс журналювання недоступний або повернув HTTP-помилку |
 | `BaseEDMException` та похідні | `oots_lib.libs.exceptions` | Помилки OOTS для віддачі у SOAP-відповіді у форматі XML |
 
 ## EDMException: публікація помилки

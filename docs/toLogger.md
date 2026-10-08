@@ -18,7 +18,7 @@ Traceability Logger.
 ## Імпорт
 
 ```python
-from oots_lib.lib.toLogger import (
+from oots_lib import (
     TraceabilityLogger,
     build_request_payload,
     build_response_payload,

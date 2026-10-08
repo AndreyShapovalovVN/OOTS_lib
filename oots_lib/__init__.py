@@ -32,6 +32,12 @@ __all__ = [
     "RepositoryItemRef",
     "ExtrinsicObjectType",
     "RegistryPackageType",
+    "TraceabilityLogger",
+    "LoggerServiceError",
+    "agent_identifier",
+    "build_request_payload",
+    "build_response_payload",
+    "build_trembita_payload",
 ]
 
 _LAZY_IMPORTS = {
@@ -64,6 +70,12 @@ _LAZY_IMPORTS = {
     "RepositoryItemRef": ("oots_lib.models.ResponseEvidences", "RepositoryItemRef"),
     "ExtrinsicObjectType": ("oots_lib.models.ResponseEvidences", "ExtrinsicObjectType"),
     "RegistryPackageType": ("oots_lib.models.ResponseEvidences", "RegistryPackageType"),
+    "TraceabilityLogger": ("oots_lib.lib.toLogger", "TraceabilityLogger"),
+    "LoggerServiceError": ("oots_lib.lib.toLogger", "LoggerServiceError"),
+    "agent_identifier": ("oots_lib.lib.toLogger", "agent_identifier"),
+    "build_request_payload": ("oots_lib.lib.toLogger", "build_request_payload"),
+    "build_response_payload": ("oots_lib.lib.toLogger", "build_response_payload"),
+    "build_trembita_payload": ("oots_lib.lib.toLogger", "build_trembita_payload"),
 }
 
 

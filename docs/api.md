@@ -80,6 +80,29 @@ SOAPTransport(service: str, conversation_id: str, if_send_error: bool = True)
 | `send_error_message(code, message, detail, cause=None)` | Завжди кидає виключення (`EDMException` або `TransportError`) |
 | `if_send_error` | `True` — помилка публікується як `EDMException`; `False` — `TransportError` |
 
+## Traceability Logger
+
+```python
+from oots_lib import (
+    TraceabilityLogger,
+    build_request_payload,
+    build_response_payload,
+    build_trembita_payload,
+)
+```
+
+| Ім'я | Опис |
+| --- | --- |
+| `TraceabilityLogger` | Клієнт для `log_request()`, `log_response()`, `log_trembita()`, `log_trembita_sync()` та `log_in_background()` |
+| `LoggerServiceError` | Виключення для HTTP/мережевих помилок, коли `raise_on_error=True` |
+| `build_request_payload(as4, edm)` | Формує payload Evidence Request |
+| `build_response_payload(as4, edm)` | Формує payload Evidence Response |
+| `build_trembita_payload(conversation_id)` | Формує початковий payload журналу викликів Трембіти |
+| `agent_identifier(agent)` | Повертає `(schemeID, value)` з XML Agent |
+
+Приклади використання, конфігурація та поведінка помилок описані в
+[інструкції з Traceability Logger](toLogger.md).
+
 ## PDF
 
 ```python
