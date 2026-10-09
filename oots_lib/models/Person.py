@@ -22,6 +22,7 @@ __all__ = [
     "get_person_from_redis",
 ]
 
+
 @dataclass(init=False)
 class Identifier(Base, NS):
     """Ідентифікатор у форматі `country/country_nationality/identifier`."""
@@ -31,7 +32,7 @@ class Identifier(Base, NS):
     identifier: str | None = None
     schemeID: str = "eidas"
 
-    def __init__(self, value: str | None = None, schemeID: str | None = "eidas"):     # NOSONAR
+    def __init__(self, value: str | None = None, schemeID: str | None = "eidas"):  # NOSONAR
         super().__init__()
         self.country_identifier = COUNTRY
         self.country_nationality = COUNTRY
@@ -39,7 +40,7 @@ class Identifier(Base, NS):
         self.schemeID = schemeID or "eidas"
         self.value = value
 
-    def get_element(self, sdg: bool=True) -> etree._Element:
+    def get_element(self, sdg: bool = True) -> etree._Element:
         if sdg:
             return self._element(
                 "sdg",
@@ -220,17 +221,14 @@ class Person(MainBase):
 
     def sdg_xml(self) -> str:
         """Повертає XML у форматі SDG."""
-        sdg = etree.Element(self._xml_helper._tname("sdg", self._name_), nsmap=self._ns)
-        etree.SubElement(sdg, self._xml_helper._tname("sdg", 'LevelOfAssurance')).text = self.LevelOfAssurance
+        sdg = self._xml_helper._element("sdg", self._name_, nsmap=self._ns)
+        self._xml_helper._subelement(sdg, "sdg", "LevelOfAssurance", text=self.LevelOfAssurance)
         if self.identifier is not None and self.identifier.value:
-            etree.SubElement(
-                sdg,
-                self._xml_helper._tname("sdg", 'Identifier'),
-                attrib={"schemeID": self.identifier.schemeID}
-            ).text = self.identifier.value
-        etree.SubElement(sdg, self._xml_helper._tname("sdg", 'FamilyName')).text = self.FamilyName
-        etree.SubElement(sdg, self._xml_helper._tname("sdg", 'GivenName')).text = self.GivenName
-        etree.SubElement(sdg, self._xml_helper._tname("sdg", 'DateOfBirth')).text = self.DateOfBirth
+            self._xml_helper._subelement(sdg, "sdg", "Identifier", text=self.identifier.value,
+                                         attrib={"schemeID": self.identifier.schemeID})
+        self._xml_helper._subelement(sdg, "sdg", "FamilyName", text=self.FamilyName)
+        self._xml_helper._subelement(sdg, "sdg", "GivenName", text=self.GivenName)
+        self._xml_helper._subelement(sdg, "sdg", "DateOfBirth", text=self.DateOfBirth)
 
         return sdg
 
@@ -286,7 +284,6 @@ class Person(MainBase):
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Person":
         return cls.set_from_dict(data)
-
 
     @property
     def dict(self) -> dict[str, Any]:
