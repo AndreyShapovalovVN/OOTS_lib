@@ -10,7 +10,7 @@
 | idna               | 3.18      | BSD-3-Clause                         |
 | isodate            | 0.7.2     | BSD License                          |
 | lxml               | 6.1.1     | BSD-3-Clause                         |
-| oots-lib           | 0.1.8     | UNKNOWN                              |
+| oots-lib           | 0.1.10    | EUPL-1.2                             |
 | platformdirs       | 4.11.3    | MIT                                  |
 | pyRegRep           | 14        | MIT License                          |
 | pyxroad            | 1.5.10    | MIT License                          |

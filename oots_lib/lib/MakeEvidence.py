@@ -33,6 +33,7 @@ _logger = logging.getLogger(__name__)
 KEYS = Keys()
 QUEUE_OUTCOMING = import_env("QUEUE_OUTCOMING")
 IF_PREVIEW: bool = import_env("IF_PREVIEW").lower() == 'true'
+LANG = import_env("LANG")
 
 
 class MakeEvidence:
@@ -158,7 +159,7 @@ class MakeEvidence:
         distribution = Distribution(self.request_content_type)
         conformantTo = IsConformantTo(self.CONFORMANT_TO_URL)  # NOSONAR
         usingAuthority = IssuingAuthority(self.ISSUING_AUTHORITY_SCHEME, self.ISSUING_AUTHORITY_ID)  # NOSONAR
-        usingAuthority.name(lang='UA', name=self.ISSUING_AUTHORITY_NAME)
+        usingAuthority.name(lang=LANG, name=self.ISSUING_AUTHORITY_NAME)
         about = IsAbout(person_tree)
 
         metadata = EMetadata()
