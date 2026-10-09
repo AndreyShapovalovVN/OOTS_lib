@@ -915,7 +915,7 @@ requires-dist = [
     { name = "lxml", specifier = ">=6.1.1" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.11.0" },
     { name = "pyrefly", marker = "extra == 'dev'", specifier = ">=0.60.0" },
-    { name = "pyregrep", specifier = ">=14" },
+    { name = "pyregrep", specifier = ">=16" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.2.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.23.7" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0.0" },
@@ -1090,15 +1090,16 @@ wheels = [
 
 [[package]]
 name = "pyregrep"
-version = "15"
+version = "16"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "lxml" },
+    { name = "urllib3" },
     { name = "xmltodict" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/92/b4/703f03cd15c91606a0cc2a87facf106e64d7490e0ffc61241a4356869509/pyregrep-15.tar.gz", hash = "sha256:316bfda4ce123c57d45e33da724cef5f6fb555dafcb9f4e24501cccd3d29e0e7", size = 22391, upload-time = "2026-09-07T09:32:23.092Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e2/6c/5d245d2ef217a6c700dacfe86126e5e7807cc4d20f3af524fe47dae3f466/pyregrep-16.tar.gz", hash = "sha256:75c157238d0f664b9dda9952ff5257b328a91bde9eb77165774890534b894d0f", size = 22535, upload-time = "2026-10-05T11:37:18.042Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c0/5c/b6f512f74395b7d8a6c82e2c32701153a1760dafd307a635ae55f4eb0d18/pyregrep-15-py3-none-any.whl", hash = "sha256:d0437437699603665b6301cfd64756118151f96eb4ffe26cc9b7b745b825f74b", size = 15263, upload-time = "2026-09-07T09:32:21.98Z" },
+    { url = "https://files.pythonhosted.org/packages/3c/ac/e3c4b8950ef83486a7c62cdd52c840020d7752be7763cce9f41e81d7de12/pyregrep-16-py3-none-any.whl", hash = "sha256:226ad8c34b4baf77acaa008771b460cef60b997bf6c60ae6b78f2c2a6f5030d2", size = 15347, upload-time = "2026-10-05T11:37:16.881Z" },
 ]
 
 [[package]]
