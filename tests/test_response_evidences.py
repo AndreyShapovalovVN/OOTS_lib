@@ -37,7 +37,7 @@ def make_object(node: str = "MainEvidence", content: str = "<a/>") -> ExtrinsicO
     return ExtrinsicObjectType(
         classification=Classification(classificationNode=node),
         EvidenceMetadata="<sdg:Evidence/>",
-        RepositoryItemRef=RepositoryItemRef(title="Certificate"),
+        RepositoryItemRef=RepositoryItemRef(),
         content_type="application/xml",
         content=content,
     )
@@ -72,8 +72,8 @@ def test_classification_rejects_unknown_node():
 
 
 def test_repository_item_ref_generates_href():
-    assert RepositoryItemRef(title="t").href.startswith("cid:")
-    assert RepositoryItemRef(title="t", href="cid:custom").href == "cid:custom"
+    assert RepositoryItemRef().href.startswith("cid:")
+    assert RepositoryItemRef(href="cid:custom").href == "cid:custom"
 
 
 async def test_save_rejects_wrong_type():

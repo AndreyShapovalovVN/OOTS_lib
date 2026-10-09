@@ -218,6 +218,22 @@ class Person(MainBase):
         self._xml = root
         return root
 
+    def sdg_xml(self) -> str:
+        """Повертає XML у форматі SDG."""
+        sdg = etree.Element(self._xml_helper._tname("sdg", self._name_), nsmap=self._ns)
+        etree.SubElement(sdg, self._xml_helper._tname("sdg", 'LevelOfAssurance')).text = self.LevelOfAssurance
+        if self.identifier is not None and self.identifier.value:
+            etree.SubElement(
+                sdg,
+                self._xml_helper._tname("sdg", 'Identifier'),
+                attrib={"schemeID": self.identifier.schemeID}
+            ).text = self.identifier.value
+        etree.SubElement(sdg, self._xml_helper._tname("sdg", 'FamilyName')).text = self.FamilyName
+        etree.SubElement(sdg, self._xml_helper._tname("sdg", 'GivenName')).text = self.GivenName
+        etree.SubElement(sdg, self._xml_helper._tname("sdg", 'DateOfBirth')).text = self.DateOfBirth
+
+        return sdg
+
     def get_xml(self) -> str:
         return super().get_xml()
 

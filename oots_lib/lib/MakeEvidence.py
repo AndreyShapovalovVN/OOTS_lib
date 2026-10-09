@@ -41,6 +41,7 @@ class MakeEvidence:
     ISSUING_AUTHORITY_SCHEME = ""
     ISSUING_AUTHORITY_NAME = ""
     CONFORMANT_TO_URL = ''
+    CONFORMANT_TO_TITLE = ''
 
     def __init__(self, message_id: str, redis: Redis):
         super().__init__()
@@ -117,6 +118,7 @@ class MakeEvidence:
                 detail=f"У Redis відсутні дані особи за ключем {person_key}",
             )
 
+        self.person._name_="NaturalPerson"
         self.as4 = await self.redis.get_from_redis(KEYS.get_request_as4(self.message_id))
 
     def _not_found(self, message: str, detail: str) -> EDMException:
@@ -150,16 +152,20 @@ class MakeEvidence:
             raise ValueError(
                 f"Дані особи для повідомлення {self.message_id} не зчитані: спершу викличте read_data()"
             )
-        person_tree = self.person.xml_tree
+        person_tree = self.person.sdg_xml()
         if person_tree is None:
             raise ValueError(
                 f"XML особи для повідомлення {self.message_id} не сформовано"
             )
 
         distribution = Distribution(self.request_content_type)
+
         conformantTo = IsConformantTo(self.CONFORMANT_TO_URL)  # NOSONAR
+        conformantTo.title(lang=LANG, title=self.CONFORMANT_TO_TITLE)
+
         usingAuthority = IssuingAuthority(self.ISSUING_AUTHORITY_SCHEME, self.ISSUING_AUTHORITY_ID)  # NOSONAR
         usingAuthority.name(lang=LANG, name=self.ISSUING_AUTHORITY_NAME)
+
         about = IsAbout(person_tree)
 
         metadata = EMetadata()
@@ -232,7 +238,7 @@ class MakeEvidence:
             extrinsic = ExtrinsicObjectType(
                 classification=Classification(classificationNode='MainEvidence'),
                 EvidenceMetadata=self.generate_metadata(main_evidence=True),
-                RepositoryItemRef=RepositoryItemRef(title="Cerificate of Marriage"),
+                RepositoryItemRef=RepositoryItemRef(),
             )
 
             if 'pdf' in content_type:

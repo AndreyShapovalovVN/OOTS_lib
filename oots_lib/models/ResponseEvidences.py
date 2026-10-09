@@ -49,7 +49,6 @@ class Classification:
 
 @dataclass
 class RepositoryItemRef:
-    title: str
     href: str = field(default_factory=_generate_cid)
 
 
@@ -270,7 +269,6 @@ def _dict_to_evidences(data: dict) -> Evidences:
 
             repo_item_data = obj.get("RepositoryItemRef", {})
             repository_item = RepositoryItemRef(
-                title=repo_item_data["title"],
                 href=repo_item_data.get("href", _generate_cid()),
             )
 

@@ -257,7 +257,7 @@ def test_generate_metadata_requires_person():
 
 def test_generate_metadata_requires_person_xml():
     evidence = build(RedisSpy())
-    evidence.person = cast("Any", SimpleNamespace(xml_tree=None))
+    evidence.person = cast("Any", SimpleNamespace(sdg_xml=lambda: None))
 
     with pytest.raises(ValueError, match="XML особи"):
         evidence.generate_metadata()
