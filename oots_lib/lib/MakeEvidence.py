@@ -41,7 +41,7 @@ class MakeEvidence:
     ISSUING_AUTHORITY_SCHEME = ""
     ISSUING_AUTHORITY_NAME = ""
     CONFORMANT_TO_URL = ''
-    CONFORMANT_TO_TITLE = ''
+    CONFORMANT_TO_TITLE = 'Test Evidence / Тестовий доказ'
 
     def __init__(self, message_id: str, redis: Redis):
         super().__init__()
