@@ -221,7 +221,11 @@ class Person(MainBase):
 
     def sdg_xml(self) -> str:
         """Повертає XML у форматі SDG."""
+        if not self._name_:
+            raise ValueError("_name_ is not set")
+
         sdg = self._xml_helper._element("sdg", self._name_, nsmap=self._ns)
+
         self._xml_helper._subelement(sdg, "sdg", "LevelOfAssurance", text=self.LevelOfAssurance)
         if self.identifier is not None and self.identifier.value:
             self._xml_helper._subelement(sdg, "sdg", "Identifier", text=self.identifier.value,
