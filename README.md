@@ -102,6 +102,11 @@ documents = service.response({"person": {"rnokpp": "1234567890"}})
 Кожна помилка транспорту завершується виключенням (див.
 [обробку помилок](docs/error-handling.md)); успішний виклик додатково журналюється до
 сервісу обміну через `TraceabilityLogger.log_trembita_sync()`.
+Для синхронної перевірки доступності сервісу логування використовуйте
+`check_service()`.
+URL та API-ключ можна передати безпосередньо під час створення
+`TraceabilityLogger(base_url=..., api_key=...)`; за їх відсутності вони читаються
+зі змінних середовища `EXCHANGE_LOGGER_URI` та `EXCHANGE_LOGGER_API_KEY`.
 
 ## Схема ключів Redis
 

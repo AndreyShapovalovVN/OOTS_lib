@@ -43,8 +43,9 @@ class TraceabilityLogger:
             timeout: float = 30.0,
             raise_on_error: bool = False,
     ) -> None:
-        self.base_url = (base_url or import_env("EXCHANGE_LOGGER_URI", "")).rstrip("/")
-        self.api_key = api_key or import_env("EXCHANGE_LOGGER_API_KEY", "")
+        self.base_url = import_env("EXCHANGE_LOGGER_URI").rstrip("/")
+        self.api_key = import_env("EXCHANGE_LOGGER_API_KEY")
+
         self.timeout = timeout
         self.raise_on_error = raise_on_error
         self._client: httpx.AsyncClient | None = None
@@ -77,6 +78,11 @@ class TraceabilityLogger:
     async def health(self) -> bool:
         """Return whether the logger and its database are available."""
         response = await self._request("GET", "/health")
+        return response is not None and response.status_code == httpx.codes.OK
+
+    def health_sync(self) -> bool:
+        """Return whether the logger and its database are available."""
+        response = self._request_sync("GET", "/health")
         return response is not None and response.status_code == httpx.codes.OK
 
     async def log_request(self, payload: Mapping[str, Any]) -> bool:
@@ -172,6 +178,15 @@ class TraceabilityLogger:
                 raise error from exc
             _logger.warning("%s", error)
             return None
+
+
+def check_service() -> bool:
+    """Synchronously check Traceability Logger availability."""
+    try:
+        return TraceabilityLogger().health_sync()
+    except ValueError:
+        _logger.warning("Traceability Logger health check skipped: service is not configured")
+        return False
 
 
 def _make_json_safe(value: Any) -> Any:

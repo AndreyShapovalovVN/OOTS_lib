@@ -2,7 +2,11 @@ import httpx
 import pytest
 
 import oots_lib.lib.toLogger as to_logger_module
-from oots_lib.lib.toLogger import TraceabilityLogger, build_trembita_payload
+from oots_lib.lib.toLogger import (
+    TraceabilityLogger,
+    build_trembita_payload,
+    check_service,
+)
 
 
 class FakeResponse:
@@ -78,3 +82,24 @@ def test_log_trembita_sync_normalizes_non_serializable_values(fake_request):
     assert logger.log_trembita_sync(payload) is True
     call = fake_request[0]
     assert call["json"]["calls"][0]["raw_response"] == "submitResponse(id=abc)"
+
+
+def test_health_sync_checks_health_endpoint(fake_request):
+    logger = TraceabilityLogger()
+
+    assert logger.health_sync() is True
+    assert len(fake_request) == 1
+    call = fake_request[0]
+    assert call["method"] == "GET"
+    assert call["url"] == f"{to_logger_module.TraceabilityLogger().base_url}/health"
+    assert call["headers"] == {
+        "X-API-Key": to_logger_module.TraceabilityLogger().api_key,
+        "Content-Type": "application/json",
+    }
+    assert call["timeout"] == 30.0
+
+
+def test_check_service_returns_false_when_not_configured(monkeypatch):
+    monkeypatch.setattr(to_logger_module, "import_env", lambda *_args, **_kwargs: "")
+
+    assert check_service() is False
