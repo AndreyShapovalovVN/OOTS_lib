@@ -33,7 +33,7 @@ _logger = logging.getLogger(__name__)
 KEYS = Keys()
 QUEUE_OUTCOMING = import_env("QUEUE_OUTCOMING")
 IF_PREVIEW: bool = import_env("IF_PREVIEW").lower() == 'true'
-LANG = import_env("LANG")
+LANG = import_env("COUNTRY_LANG")
 
 
 class MakeEvidence:
