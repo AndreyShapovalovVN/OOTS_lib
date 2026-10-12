@@ -9,6 +9,7 @@ import pytest
 # оточення мають бути встановлені до першого імпорту `oots_lib.*`.
 _TEST_ENV = {
     "COUNTRY": "UA",
+    "COUNTRY_LANG": "UK",
     "REDIS_URL": "redis://localhost:6379/0",
     "REDIS_TTL": "60",
     "REDIS_PREFIX": "",
