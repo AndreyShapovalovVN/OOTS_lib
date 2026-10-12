@@ -81,7 +81,7 @@ class FakeData:
 
 
 def make_person() -> Person:
-    person = Person(FamilyName="Shevchenko", GivenName="Taras")
+    person = Person(_name_="Person", FamilyName="Shevchenko", GivenName="Taras")
     person.get_element()
     return person
 
