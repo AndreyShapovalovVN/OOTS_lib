@@ -1,5 +1,6 @@
 import logging
 import uuid
+from datetime import datetime, timezone
 
 from lxml import etree
 
@@ -15,23 +16,29 @@ __all__ = [
     "IsAbout",
 ]
 
+
 class EMetadata(NS):
     def __init__(self):
         super().__init__()
         self._xml: etree._Element = self._element("sdg", "Evidence")
         self._subelement(self._xml, "sdg", "Identifier", text=uuid.uuid4())
 
-    def issuingAuthority(self, issuingAuthority: etree._Element):   # NOSONAR
+    def issuingAuthority(self, issuingAuthority: etree._Element):  # NOSONAR
         self._xml.append(issuingAuthority)
 
-    def isConformeant(self, isConformeant: etree._Element):   # NOSONAR
+    def isConformeant(self, isConformeant: etree._Element):  # NOSONAR
         self._xml.append(isConformeant)
 
     def distribution(self, distribution: etree._Element):
         self._xml.append(distribution)
 
-    def isAbout(self, isAbout: etree._Element):    # NOSONAR
+    def isAbout(self, isAbout: etree._Element):  # NOSONAR
         self._xml.append(isAbout)
+
+    def issuingDate(self):
+        self._subelement(
+            self._xml, "sdg", "IssuingDate", text=datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        )
 
 
 class IssuingAuthority(NS):

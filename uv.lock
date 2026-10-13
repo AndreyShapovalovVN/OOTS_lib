@@ -886,7 +886,7 @@ wheels = [
 
 [[package]]
 name = "oots-lib"
-version = "0.1.12"
+version = "0.1.13"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },
@@ -915,7 +915,7 @@ requires-dist = [
     { name = "lxml", specifier = ">=6.1.1" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=2.4.0" },
     { name = "pyrefly", marker = "extra == 'dev'", specifier = ">=0.60.0" },
-    { name = "pyregrep", specifier = ">=16" },
+    { name = "pyregrep", specifier = ">=17" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.2.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.23.7" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0.0" },
@@ -1090,16 +1090,16 @@ wheels = [
 
 [[package]]
 name = "pyregrep"
-version = "16"
+version = "17"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "lxml" },
     { name = "urllib3" },
     { name = "xmltodict" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e2/6c/5d245d2ef217a6c700dacfe86126e5e7807cc4d20f3af524fe47dae3f466/pyregrep-16.tar.gz", hash = "sha256:75c157238d0f664b9dda9952ff5257b328a91bde9eb77165774890534b894d0f", size = 22535, upload-time = "2026-10-05T11:37:18.042Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/bf/69/9e51a03c8cc99f1c018132d2110de082519a6b311f29d15bcee980e8471a/pyregrep-17.tar.gz", hash = "sha256:bb7804a5e120c66ee9044642f5947a83c5361ea254000249a6fddad85f89fcd4", size = 23010, upload-time = "2026-10-13T10:57:01.384Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3c/ac/e3c4b8950ef83486a7c62cdd52c840020d7752be7763cce9f41e81d7de12/pyregrep-16-py3-none-any.whl", hash = "sha256:226ad8c34b4baf77acaa008771b460cef60b997bf6c60ae6b78f2c2a6f5030d2", size = 15347, upload-time = "2026-10-05T11:37:16.881Z" },
+    { url = "https://files.pythonhosted.org/packages/ef/ef/e0eb2626f88531729c402f09f6560ec0e83eb678c47eef20b1b574d990ce/pyregrep-17-py3-none-any.whl", hash = "sha256:cab86c770bb7027b4a78bf7998e9f8422bcf00ec24570de50a0b6910fbac8679", size = 15537, upload-time = "2026-10-13T10:57:00.271Z" },
 ]
 
 [[package]]

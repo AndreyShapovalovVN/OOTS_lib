@@ -226,12 +226,11 @@ class Person(MainBase):
 
         sdg = self._xml_helper._element("sdg", self._name_, nsmap=self._ns)
 
-        self._xml_helper._subelement(sdg, "sdg", "LevelOfAssurance", text=self.LevelOfAssurance)
         if self.identifier is not None and self.identifier.value:
             self._xml_helper._subelement(sdg, "sdg", "Identifier", text=self.identifier.value,
                                          attrib={"schemeID": self.identifier.schemeID})
-        self._xml_helper._subelement(sdg, "sdg", "FamilyName", text=self.FamilyName)
-        self._xml_helper._subelement(sdg, "sdg", "GivenName", text=self.GivenName)
+        self._xml_helper._subelement(sdg, "sdg", "FamilyName", text=self.FamilyName or self.FamilyNameNonLatin)
+        self._xml_helper._subelement(sdg, "sdg", "GivenName", text=self.GivenName or self.GivenNameNonLatin)
         self._xml_helper._subelement(sdg, "sdg", "DateOfBirth", text=self.DateOfBirth)
 
         return sdg

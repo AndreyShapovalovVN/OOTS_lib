@@ -171,18 +171,22 @@ class MakeEvidence:
         metadata = EMetadata()
 
         if main_evidence:
+
             about_tree = about.xml_tree
             conformant_tree = conformantTo.xml_tree
             distribution_tree = distribution.xml_tree
             authority_tree = usingAuthority.xml_tree
+
             assert about_tree is not None
             assert conformant_tree is not None
             assert distribution_tree is not None
             assert authority_tree is not None
+
             metadata.isAbout(about_tree)
-            metadata.isConformeant(conformant_tree)
-            metadata.distribution(distribution_tree)
             metadata.issuingAuthority(authority_tree)
+            metadata.isConformeant(conformant_tree)
+            metadata.issuingDate()
+            metadata.distribution(distribution_tree)
         else:
             ...
 
@@ -238,7 +242,7 @@ class MakeEvidence:
             extrinsic = ExtrinsicObjectType(
                 classification=Classification(classificationNode='MainEvidence'),
                 EvidenceMetadata=self.generate_metadata(main_evidence=True),
-                RepositoryItemRef=RepositoryItemRef(),
+                RepositoryItemRef=RepositoryItemRef(title="Cerificate of Marriage"),
             )
 
             if 'pdf' in content_type:
