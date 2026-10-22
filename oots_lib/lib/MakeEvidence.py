@@ -242,7 +242,7 @@ class MakeEvidence:
             extrinsic = ExtrinsicObjectType(
                 classification=Classification(classificationNode='MainEvidence'),
                 EvidenceMetadata=self.generate_metadata(main_evidence=True),
-                RepositoryItemRef=RepositoryItemRef(title="Cerificate of Marriage"),
+                RepositoryItemRef=RepositoryItemRef(title=self.CONFORMANT_TO_TITLE),
             )
 
             if 'pdf' in content_type:
