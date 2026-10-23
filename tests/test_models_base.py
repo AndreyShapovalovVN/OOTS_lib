@@ -1,6 +1,7 @@
 import datetime
 import json
 from dataclasses import dataclass
+from typing import ClassVar
 
 import pytest
 from lxml import etree
@@ -11,6 +12,7 @@ from oots_lib.models.Base import Base, MainBase
 
 @dataclass
 class Sample(MainBase):
+    serialization_fields: ClassVar[tuple[str, ...]] = ("name", "active")
     name: str = "Іван"
     active: bool = True
 
@@ -95,6 +97,7 @@ def test_get_dict_and_get_json():
 def test_get_json_keeps_non_ascii_and_serializes_dates(root_name):
     @dataclass
     class WithDate(Sample):
+        serialization_fields: ClassVar[tuple[str, ...]] = (*Sample.serialization_fields, "day")
         day: datetime.date = datetime.date(2024, 5, 1)
 
     payload = WithDate(_name_=root_name).get_json()
@@ -145,6 +148,7 @@ def test_get_json_name_with_overridden_get_dict():
 def test_main_base_name_allows_required_subclass_fields():
     @dataclass
     class Required(MainBase):
+        serialization_fields: ClassVar[tuple[str, ...]] = ("value",)
         value: int
 
         def get_element(self):
@@ -166,3 +170,81 @@ def test_get_json_uses_updated_root_name():
 
     sample._name_ = ""
     assert json.loads(sample.get_json()) == fields
+
+
+@dataclass
+class Selected(MainBase):
+    serialization_fields: ClassVar[tuple[str, ...]] = ("name",)
+    name: str = "public"
+    secret: str = "private"
+
+
+def test_allowlist_controls_both_formats_and_inherited_fields():
+    @dataclass
+    class Extended(Selected):
+        internal: str = "hidden"
+
+    model = Extended(_name_="record")
+    assert model.get_dict() == {"name": "public"}
+    assert json.loads(model.get_json()) == {"record": {"name": "public"}}
+    assert etree.tostring(model.get_element()) == b"<Extended><name>public</name></Extended>"
+    assert "private" not in model.get_xml()
+    assert "hidden" not in model.get_xml()
+
+
+def test_empty_allowlist_exports_no_fields():
+    @dataclass
+    class Empty(MainBase):
+        secret: str = "private"
+
+    model = Empty()
+    assert model.get_dict() == {}
+    assert json.loads(model.get_json()) == {}
+    assert len(model.get_element()) == 0
+
+
+def test_nested_allowlists_apply_in_lists_and_dicts():
+    @dataclass
+    class Container(MainBase):
+        serialization_fields: ClassVar[tuple[str, ...]] = ("children", "mapping")
+        children: object = None
+        mapping: object = None
+
+    model = Container(children=[Selected()], mapping={"child": Selected()})
+    expected = {"children": [{"name": "public"}], "mapping": {"child": {"name": "public"}}}
+    assert model.get_dict() == expected
+    assert json.loads(model.get_json()) == expected
+    root = etree.fromstring(model.get_xml().encode())
+    assert root.findtext("children/name") == "public"
+    assert root.findtext("mapping/child/name") == "public"
+    assert "private" not in model.get_xml()
+
+
+@pytest.mark.parametrize("method", ["get_dict", "get_xml"])
+def test_unlisted_values_are_not_copied_or_serialized(method):
+    class CannotCopy:
+        def __deepcopy__(self, memo):
+            raise AssertionError("Excluded field was accessed")
+
+    model = Selected(secret=CannotCopy())
+    getattr(model, method)()
+
+
+@pytest.mark.parametrize("method", ["get_dict", "get_xml"])
+def test_plain_nested_dataclass_requires_explicit_serialization_fields(method):
+    @dataclass
+    class Unsafe:
+        secret: str = "private"
+
+    model = Selected(name=Unsafe())
+    with pytest.raises(TypeError, match="serialization_fields"):
+        getattr(model, method)()
+
+
+@pytest.mark.parametrize("method", ["get_dict", "get_xml"])
+def test_allowlist_rejects_service_fields(method):
+    class Invalid(Selected):
+        serialization_fields = ("_name_",)
+
+    with pytest.raises(ValueError, match="_name_"):
+        getattr(Invalid(), method)()

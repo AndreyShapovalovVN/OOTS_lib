@@ -1,9 +1,11 @@
+import copy
 import datetime
 import json
 import pathlib
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field, is_dataclass
+from typing import ClassVar
 
 from lxml import etree
 
@@ -13,6 +15,47 @@ from oots_lib.lib.xml_utils import set_element_text
 
 @dataclass
 class Base(ABC):
+    serialization_fields: ClassVar[tuple[str, ...]] = ()
+
+    def _serialization_items(self):
+        """Повертає лише явно дозволені поля у заданому порядку."""
+        for name in self.serialization_fields:
+            if name.startswith("_"):
+                raise ValueError(f"Службове поле не можна серіалізувати: {name}")
+            yield name, getattr(self, name)
+
+    @staticmethod
+    def _dict_value(value):
+        if isinstance(value, Base):
+            return value.get_dict()
+        if is_dataclass(value) and not isinstance(value, type):
+            raise TypeError("Вкладена модель має успадковувати Base та визначати serialization_fields")
+        if isinstance(value, dict):
+            return {key: Base._dict_value(item) for key, item in value.items()}
+        if isinstance(value, (list, tuple)):
+            return type(value)(Base._dict_value(item) for item in value)
+        return copy.deepcopy(value)
+
+    def get_dict(self) -> dict:
+        return {name: self._dict_value(value) for name, value in self._serialization_items()}
+
+    @staticmethod
+    def _append_xml_value(root: etree._Element, name: str, value) -> None:
+        if isinstance(value, (list, tuple)):
+            for item in value:
+                Base._append_xml_value(root, name, item)
+        elif isinstance(value, Base):
+            element = copy.deepcopy(value.get_element())
+            element.tag = name
+            root.append(element)
+        elif isinstance(value, dict):
+            element = etree.SubElement(root, name)
+            for key, item in value.items():
+                Base._append_xml_value(element, key, item)
+        elif is_dataclass(value) and not isinstance(value, type):
+            raise TypeError("Вкладена модель має успадковувати Base та визначати serialization_fields")
+        else:
+            Base._set_text(etree.SubElement(root, name), value)
 
     @staticmethod
     def _set_text(element: etree._Element, value) -> None:
@@ -43,6 +86,13 @@ class Base(ABC):
 class MainBase(Base):
     _name_: str | None = field(default=None, kw_only=True)
 
+    def get_element(self) -> etree._Element:
+        """Стандартний XML; спеціальні схеми можуть перевизначити цей метод."""
+        root = etree.Element(type(self).__name__)
+        for name, value in self._serialization_items():
+            self._append_xml_value(root, name, value)
+        return root
+
     @classmethod
     def set_from_dict(cls, data: dict):
         raise NotImplementedError(
@@ -56,11 +106,6 @@ class MainBase(Base):
             encoding="utf-8",
         )
         return xml_bytes.decode("utf-8")
-
-    def get_dict(self) -> dict:
-        data = asdict(self)
-        data.pop("_name_", None)
-        return data
 
     def get_json(self) -> str:
         data = self.get_dict()

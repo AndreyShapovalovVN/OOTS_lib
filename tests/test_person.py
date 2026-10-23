@@ -323,3 +323,30 @@ async def test_person_from_redis_keeps_state_when_key_missing():
     await person.from_redis(RedisStub(None), "key")
 
     assert person.FamilyName == "Shevchenko"
+
+
+def test_person_allowlist_controls_all_output_formats():
+    class LimitedPerson(Person):
+        serialization_fields = ("FamilyName", "identifier")
+
+    person = LimitedPerson(
+        _name_="Person", FamilyName="Public", FamilyNameNonLatin="Hidden",
+        GivenName="Secret", identifier=Identifier("UA/UA/1"),
+    )
+    expected = {"FamilyName": "Public", "identifier": {"value": "UA/UA/1", "schemeID": "eidas"}}
+    assert person.get_dict() == expected
+    assert person.dict == {"family_name": "Public", "eidas_identifier": "UA/UA/1"}
+    for root in (person.get_element(), person.sdg_xml()):
+        assert [etree.QName(child).localname for child in root] == ["Identifier", "FamilyName"]
+        assert root.find(f"{{{SDG}}}FamilyName").get("nonLatin") is None
+        assert "Secret" not in etree.tostring(root).decode()
+
+
+def test_identifier_allowlist_controls_xml_attributes_and_nested_dict():
+    class ValueOnly(Identifier):
+        serialization_fields = ("value",)
+
+    identifier = ValueOnly("UA/UA/1", schemeID="hidden")
+    assert identifier.get_dict() == {"value": "UA/UA/1"}
+    assert identifier.get_element().get("schemeID") is None
+    assert Person(identifier=identifier).get_dict()["identifier"] == {"value": "UA/UA/1"}

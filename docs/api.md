@@ -48,7 +48,39 @@ from oots_lib.models import save_person_to_redis, get_person_from_redis
   старого формату для сумісності.
 
 Похідні від `MainBase` моделі документів отримують `get_xml()`, `get_dict()`,
-`get_json()` і `get_pdf(xslt_file, css=None)`; підклас має реалізувати `get_element()`.
+`get_json()` і `get_pdf(xslt_file, css=None)`. Кожна модель явно задає
+`serialization_fields` — спільний список дозволених полів для dict, JSON та XML:
+
+```python
+from dataclasses import dataclass
+from typing import ClassVar
+from oots_lib.models.Base import MainBase
+
+@dataclass
+class Record(MainBase):
+    serialization_fields: ClassVar[tuple[str, ...]] = ("number", "title")
+    number: str = "123"
+    title: str = "Витяг"
+    internal_note: str = "Лише для внутрішнього використання"
+
+record = Record()
+record.get_dict()  # {"number": "123", "title": "Витяг"}
+record.get_xml()   # <Record><number>123</number><title>Витяг</title></Record>
+```
+
+Без списку жодне поле не серіалізується. Для наявних підкласів, які раніше
+покладалися на автоматичне включення всіх полів dataclass, потрібно додати цей
+список. Підкласи успадковують його; нові поля додаються явно через
+`(*Parent.serialization_fields, "new_field")`. Службові поля з префіксом `_`
+заборонені. Вкладені моделі мають успадковувати `Base` і визначати власний список;
+фільтрація діє також у списках і словниках.
+
+Стандартний `get_element()` створює корінь з назвою моделі та дочірні елементи
+за списком полів. Для спеціальної XML-схеми можна перевизначити `get_element()`;
+така реалізація повинна використовувати `self._serialization_items()` як джерело
+дозволених полів (як у `Person`), включно з полями, що стають XML-атрибутами.
+У `Person` список також застосовується до legacy-властивості `.dict` і `sdg_xml()`.
+
 Поле `_name_` задає зовнішній ключ JSON: `Person(_name_="person").get_json()`
 повертає `{"person": {інші поля}}`. Якщо `_name_` — `None` або порожній рядок,
 JSON містить поля без обгортки. Службове поле `_name_` не входить до `get_dict()`.

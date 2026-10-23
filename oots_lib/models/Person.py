@@ -27,6 +27,8 @@ __all__ = [
 class Identifier(Base, NS):
     """Ідентифікатор у форматі `country/country_nationality/identifier`."""
 
+    serialization_fields: ClassVar[tuple[str, ...]] = ("value", "schemeID")
+
     country_identifier: str = COUNTRY
     country_nationality: str = COUNTRY
     identifier: str | None = None
@@ -41,15 +43,18 @@ class Identifier(Base, NS):
         self.value = value
 
     def get_element(self, sdg: bool = True) -> etree._Element:
+        allowed = dict(self._serialization_items())
         if sdg:
             return self._element(
                 "sdg",
                 "Identifier",
-                text=self.value,
-                attrib={"schemeID": self.schemeID},
+                text=allowed.get("value"),
+                attrib={"schemeID": allowed["schemeID"]} if "schemeID" in allowed else None,
                 nsmap={"sdg": self._ns["sdg"]},
             )
-        return self._element(None, "Identifier", text=self.identifier, nsmap={})
+        return self._element(
+            None, "Identifier", text=self.identifier if "value" in allowed else None, nsmap={}
+        )
 
     @property
     def value(self) -> str | None:
@@ -126,6 +131,8 @@ class Person(MainBase):
         ("CountryOfResidence", "country_of_residence"),
     )
 
+    serialization_fields: ClassVar[tuple[str, ...]] = tuple(name for name, _ in _FIELD_ALIASES)
+
     def __post_init__(self) -> None:
         self._xml = None
 
@@ -194,15 +201,19 @@ class Person(MainBase):
         return self.get_element()
 
     def get_element(self) -> etree._Element:
+        allowed = dict(self._serialization_items())
         root = self._xml_helper._element("sdg", "Person", nsmap=self._ns)
 
-        self._xml_helper._subelement(root, "sdg", "LevelOfAssurance", text=self.LevelOfAssurance)
+        if "LevelOfAssurance" in allowed:
+            self._xml_helper._subelement(root, "sdg", "LevelOfAssurance", text=self.LevelOfAssurance)
 
-        if self.identifier is not None and self.identifier.value:
+        if "identifier" in allowed and self.identifier is not None and self.identifier.value:
             root.append(self.identifier.get_element(sdg=True))
 
         for name in self._NAME_FIELDS:
-            non_latin = getattr(self, f"{name}NonLatin")
+            if name not in allowed:
+                continue
+            non_latin = allowed.get(f"{name}NonLatin")
             self._xml_helper._subelement(
                 root,
                 "sdg",
@@ -211,10 +222,12 @@ class Person(MainBase):
                 attrib={"nonLatin": non_latin} if non_latin else None,
             )
 
-        self._xml_helper._subelement(root, "sdg", "DateOfBirth", text=self.DateOfBirth)
+        if "DateOfBirth" in allowed:
+            self._xml_helper._subelement(root, "sdg", "DateOfBirth", text=self.DateOfBirth)
 
         for tag in self._TEXT_FIELDS:
-            self._xml_helper._subelement(root, "sdg", tag, text=getattr(self, tag))
+            if tag in allowed:
+                self._xml_helper._subelement(root, "sdg", tag, text=getattr(self, tag))
 
         self._xml = root
         return root
@@ -224,14 +237,18 @@ class Person(MainBase):
         if not self._name_:
             raise ValueError("_name_ is not set")
 
+        allowed = dict(self._serialization_items())
         sdg = self._xml_helper._element("sdg", self._name_, nsmap=self._ns)
 
-        if self.identifier is not None and self.identifier.value:
-            self._xml_helper._subelement(sdg, "sdg", "Identifier", text=self.identifier.value,
-                                         attrib={"schemeID": self.identifier.schemeID})
-        self._xml_helper._subelement(sdg, "sdg", "FamilyName", text=self.FamilyName or self.FamilyNameNonLatin)
-        self._xml_helper._subelement(sdg, "sdg", "GivenName", text=self.GivenName or self.GivenNameNonLatin)
-        self._xml_helper._subelement(sdg, "sdg", "DateOfBirth", text=self.DateOfBirth)
+        if "identifier" in allowed and self.identifier is not None and self.identifier.value:
+            sdg.append(self.identifier.get_element(sdg=True))
+        for name in ("FamilyName", "GivenName"):
+            if name in allowed:
+                self._xml_helper._subelement(
+                    sdg, "sdg", name, text=allowed[name] or allowed.get(f"{name}NonLatin")
+                )
+        if "DateOfBirth" in allowed:
+            self._xml_helper._subelement(sdg, "sdg", "DateOfBirth", text=self.DateOfBirth)
 
         return sdg
 
@@ -240,18 +257,11 @@ class Person(MainBase):
 
     def get_dict(self) -> dict[str, Any]:
         data: dict[str, Any] = {}
-        for name, _ in self._FIELD_ALIASES:
+        for name, value in self._serialization_items():
             if name == "identifier":
-                data[name] = (
-                    {
-                        "value": self.identifier.value,
-                        "schemeID": self.identifier.schemeID,
-                    }
-                    if self.identifier is not None
-                    else None
-                )
+                data[name] = value.get_dict() if value is not None else None
             else:
-                data[name] = self._serialize_value(getattr(self, name))
+                data[name] = self._dict_value(self._serialize_value(value))
         return data
 
     @classmethod
@@ -291,9 +301,12 @@ class Person(MainBase):
     @property
     def dict(self) -> dict[str, Any]:
         data: dict[str, Any] = {}
+        allowed = dict(self._serialization_items())
         for name, alias in self._FIELD_ALIASES:
+            if name not in allowed:
+                continue
             if name == "identifier":
-                data[alias] = self.identifier.value if self.identifier else None
+                data[alias] = self.identifier.get_dict().get("value") if self.identifier else None
             else:
                 data[alias] = self._serialize_value(getattr(self, name))
         return data
