@@ -80,16 +80,19 @@ class TypedEDMException(EDMException):
 
 
 class AuthenticationException(TypedEDMException):
-    DEFAULT_MESSAGE = "Failed Authentication"
+    DEFAULT_MESSAGE = "Failed Authentication - Identity matching failed after reauthentication"
     DEFAULT_CODE = "EDM:ERR:0001"
     DEFAULT_ETYPE = "rs:AuthenticationExceptionType"
-    DEFAULT_SEVERITY = "urn:sr.oots.tech.ec.europa.eu:codes:ErrorSeverity:EDMErrorResponse:PreviewRequired"
 
 
-class AuthorizationException(TypedEDMException):
-    DEFAULT_MESSAGE = "Failed Authentication"
+class UserRejectedException(TypedEDMException):
+    DEFAULT_MESSAGE = "Missing Authorization - User rejected the evidence exchange"
     DEFAULT_CODE = "EDM:ERR:0002"
     DEFAULT_ETYPE = "rs:AuthorizationExceptionType"
+
+
+class AuthorizationException(UserRejectedException):
+    DEFAULT_MESSAGE = "Missing Authorization - Preview required"
     DEFAULT_SEVERITY = "urn:sr.oots.tech.ec.europa.eu:codes:ErrorSeverity:EDMErrorResponse:PreviewRequired"
 
 
@@ -100,7 +103,7 @@ class InvalidRequestException(TypedEDMException):
 
 
 class ObjectNotFoundException(TypedEDMException):
-    DEFAULT_MESSAGE = "Object not found"
+    DEFAULT_MESSAGE = "Object not found - No matching evidence available in the registry"
     DEFAULT_CODE = "EDM:ERR:0004"
     DEFAULT_ETYPE = "rs:ObjectNotFoundExceptionType"
 
@@ -132,6 +135,7 @@ class QueryException(TypedEDMException):
 __all__ = [
     "AuthenticationException",
     "AuthorizationException",
+    "UserRejectedException",
     "EDMException",
     "InvalidRequestException",
     "ObjectNotFoundException",
