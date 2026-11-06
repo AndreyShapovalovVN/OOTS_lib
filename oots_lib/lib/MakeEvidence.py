@@ -130,9 +130,22 @@ class MakeEvidence:
         """
         Зберігає сформовані докази до Redis у форматі Evidences.
 
-        Після збереження перевіряє preview-прапор через get_flag()
-        і за потреби відправляє повідомлення на обробку.
+        Якщо preview вимагає постачальник, після збереження публікує
+        EDM:ERR:0002 із посиланням для підтвердження передачі доказів.
         """
+        # The receiver already sends 0002 when the request asks for preview.
+        request = self.request.serialize() if self.request is not None else {}
+        provider_requires_preview = (
+            self.if_preview
+            and not deep_get(request, "doc", "PossibilityForPreview", default=False)
+            and not deep_get(request, "doc", "PreviewLocation")
+        )
+        preview_url = None
+        if provider_requires_preview:
+            preview_url = import_env("PREVIEW_URL").strip().rstrip("/")
+            if not preview_url:
+                raise ValueError("PREVIEW_URL must be set when the provider requires preview")
+
         _logger.info(f"Збереження набору доказів для повідомлення {self.message_id}")
 
         if is_dataclass(self.evidence):
@@ -141,7 +154,21 @@ class MakeEvidence:
             raise TypeError(f"Очікувався Evidences, отримано {type(self.evidence)}")
 
         # Перевіряємо, чи потрібно відправляти на обробку
-        if not self.if_preview:
+        if provider_requires_preview:
+            # Save the evidence first so it is available when the user opens the URL.
+            await self.redis.save_to_redis(
+                KEYS.get_response_exp(self.message_id),
+                {
+                    "exception": {
+                        "code": "EDM:ERR:0002",
+                        "message": "Постачальник доказу вимагає попереднього перегляду",
+                        "detail": "Користувачу необхідно обрати потрібні докази та підтвердити їх передачу",
+                        "preview_link": f"{preview_url}/{self.message_id}",
+                    }
+                },
+            )
+            await self.redis.push_to_queue(import_env("QUEUE_OUTCOMING"), str(self.message_id))
+        elif not self.if_preview:
             _logger.info(f"Відправляємо повідомлення {self.message_id} до черги обробки")
             await self.redis.push_to_queue(QUEUE_OUTCOMING, f"{self.message_id}")
         else:
