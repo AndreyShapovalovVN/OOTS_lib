@@ -54,6 +54,8 @@ class SOAPTransport(ABC):
                 cause=e,
             )
 
+        self.client.issue = f"oots:conversationid:{self.conversation_id}"
+
         _logger.info(f"XClient успішно створений: {self.client}")
 
     def send_error_message(

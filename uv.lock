@@ -951,7 +951,7 @@ wheels = [
 
 [[package]]
 name = "oots-lib"
-version = "0.1.17"
+version = "0.1.18"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },
@@ -977,14 +977,14 @@ pdf = [
 [package.metadata]
 requires-dist = [
     { name = "httpx", specifier = ">=0.28.1" },
-    { name = "lxml", specifier = ">=6.1.1" },
+    { name = "lxml", specifier = ">=6.1.3" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=2.4.0" },
     { name = "pyrefly", marker = "extra == 'dev'", specifier = ">=0.60.0" },
     { name = "pyregrep", specifier = ">=17" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.2.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.23.7" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0.0" },
-    { name = "pyxroad", specifier = ">=1.5.10" },
+    { name = "pyxroad", specifier = ">=1.5.12" },
     { name = "redis", specifier = ">=8.1.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.16.10" },
     { name = "weasyprint", marker = "extra == 'pdf'", specifier = ">=62.3" },
@@ -1217,7 +1217,7 @@ wheels = [
 
 [[package]]
 name = "pyxroad"
-version = "1.5.11"
+version = "1.5.12"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "lxml" },
@@ -1226,9 +1226,9 @@ dependencies = [
     { name = "setuptools" },
     { name = "zeep" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/40/6e/2643458b138dbde402c1d47e74a60bb25c95dfe9772419e748c1d8bda673/pyxroad-1.5.11.tar.gz", hash = "sha256:a5572452fbe2b8aaa6dcd8447dd3c6227b9958d19b21853237cdc4b15253b557", size = 140782, upload-time = "2026-09-15T14:54:24.178Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/50/03/be2f00aec34cf85fed452ca52fa8ba902156c8b93e837c876030d477fd4f/pyxroad-1.5.12.tar.gz", hash = "sha256:f576729297621c432706ae2ca9771cbbc1ddb46364c0352ca8d352edb505edc4", size = 112314, upload-time = "2026-11-10T17:00:51.178Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ae/0c/685032500f98e414c82606622f7bcd89807453b188be79713b6bbb1eabdc/pyxroad-1.5.11-py3-none-any.whl", hash = "sha256:e68c59df56b56906d7deba607e2c06da64877a21d95f4631e5f4aaa013a0f498", size = 108856, upload-time = "2026-09-15T14:54:25.233Z" },
+    { url = "https://files.pythonhosted.org/packages/7d/ef/93b29d9c1f33c0c96de8135309fa76f9108b3cfcef9b3d7a4f3077798871/pyxroad-1.5.12-py3-none-any.whl", hash = "sha256:da9dcab6e7b61eb086b02b42590d12320a66e94ee2c6cafb06e67a8a8bd211fd", size = 11574, upload-time = "2026-11-10T17:00:50.217Z" },
 ]
 
 [[package]]
