@@ -99,6 +99,11 @@ JSON містить поля без обгортки. Службове поле 
 | `request_content_type` | `sdg:DistributedAs/sdg:Format` із запиту |
 | `generate_metadata(main_evidence=True)` | XML метаданих доказу (`isAbout`, `distribution`, `issuingAuthority`) |
 
+Якщо `self.data.generate_data()` кидає `EDMException`, `transform_data()` завершується
+без повторного винятку: початкову помилку вже публікує сам `EDMException`.
+Доказ очищується, а наступні виклики `transform_data()` і `load_data_to_redis()`
+для цього об'єкта нічого не роблять, щоб не створювати додаткових помилок чи відповідей.
+
 ## SOAPTransport
 
 ```python

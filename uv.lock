@@ -1217,7 +1217,7 @@ wheels = [
 
 [[package]]
 name = "pyxroad"
-version = "1.5.12"
+version = "1.5.13"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "lxml" },
@@ -1226,9 +1226,9 @@ dependencies = [
     { name = "setuptools" },
     { name = "zeep" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/50/03/be2f00aec34cf85fed452ca52fa8ba902156c8b93e837c876030d477fd4f/pyxroad-1.5.12.tar.gz", hash = "sha256:f576729297621c432706ae2ca9771cbbc1ddb46364c0352ca8d352edb505edc4", size = 112314, upload-time = "2026-11-10T17:00:51.178Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/9c/f8/31379bdeb3846e53fcc4c734203839e3df9ca469212a8fb415d91b76e201/pyxroad-1.5.13.tar.gz", hash = "sha256:f5084301becf0221b7f682e36b5cf5bf0c11c6f747dcca18e97598a7d44fd32b", size = 116373, upload-time = "2026-11-11T14:29:18.104Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7d/ef/93b29d9c1f33c0c96de8135309fa76f9108b3cfcef9b3d7a4f3077798871/pyxroad-1.5.12-py3-none-any.whl", hash = "sha256:da9dcab6e7b61eb086b02b42590d12320a66e94ee2c6cafb06e67a8a8bd211fd", size = 11574, upload-time = "2026-11-10T17:00:50.217Z" },
+    { url = "https://files.pythonhosted.org/packages/ec/e3/3bf0e1682979342fa413b42a039a41d7e17cbb5a78cd1bac4694188be1d8/pyxroad-1.5.13-py3-none-any.whl", hash = "sha256:eaab66bf29137827ae7d257527adcf5cb2042610e3e8099dcdee35fcef199262", size = 13515, upload-time = "2026-11-11T14:29:17.032Z" },
 ]
 
 [[package]]

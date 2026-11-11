@@ -54,6 +54,7 @@ class MakeEvidence:
         self.as4: dict | None | None = None
 
         self.evidence: Evidences | None = None
+        self._generation_stopped = False
         self._request_content_type: str | None = None
 
         self.request_to_service: dict | None = None
@@ -133,6 +134,9 @@ class MakeEvidence:
         Якщо preview вимагає постачальник, після збереження публікує
         EDM:ERR:0002 із посиланням для підтвердження передачі доказів.
         """
+        if self._generation_stopped:
+            return
+
         # The receiver already sends 0002 when the request asks for preview.
         request = self.request.serialize() if self.request is not None else {}
         provider_requires_preview = (
@@ -235,6 +239,9 @@ class MakeEvidence:
         return self._request_content_type
 
     async def transform_data(self):
+        """Формує докази; EDMException із джерела завершує обробку без нових помилок."""
+        if self._generation_stopped:
+            return
 
         if self.data is None:
             raise ValueError(
@@ -244,6 +251,12 @@ class MakeEvidence:
 
         try:
             documents = await self.data.generate_data()
+        except EDMException:
+            # EDMException вже публікує помилку. Не передаємо її викликачу
+            # і не дозволяємо наступним крокам зберегти відсутній або старий доказ.
+            self._generation_stopped = True
+            self.evidence = None
+            return
         except Exception as e:
             raise self._not_found(
                 message="Інформацію про людину не знайдено",

@@ -319,6 +319,42 @@ async def test_transform_data_wraps_data_errors():
         await evidence.transform_data()
 
 
+@pytest.mark.parametrize("existing_evidence", [False, True])
+async def test_generation_edm_exception_stops_pipeline_without_additional_errors(existing_evidence):
+    redis = RedisSpy()
+    evidence = build(redis)
+    if existing_evidence:
+        await evidence.transform_data()
+    error = EDMException(
+        redis=redis,
+        queue="errors",
+        key=None,
+        message_id="msg-1",
+        code="EDM:ERR:0006",
+        message="Помилка сервісу",
+        detail="Первинна помилка",
+    )
+    await error.reporting_task
+    evidence.data = FakeData(error=error)
+    # Подальша обробка запиту теж була б помилковою, якби не зупинилася.
+    evidence.request = None
+
+    async def caller():
+        try:
+            await evidence.transform_data()
+            await evidence.load_data_to_redis()
+        except Exception:
+            pytest.fail("Помилка не повинна потрапляти до обробника викликача")
+
+    await caller()
+    await caller()
+
+    assert evidence.evidence is None
+    assert list(redis.saved) == [KEYS.get_response_exp("msg-1")]
+    assert redis.saved[KEYS.get_response_exp("msg-1")]["exception"]["code"] == "EDM:ERR:0006"
+    assert redis.pushed == [("errors", "msg-1")]
+
+
 async def test_load_data_to_redis_pushes_to_queue_without_preview():
     redis = RedisSpy()
     evidence = build(redis)
