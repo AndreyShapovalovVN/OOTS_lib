@@ -9,8 +9,14 @@ on:
 
 jobs:
   code-quality:
-    name: Python Code Quality
+    name: Python ${{ matrix.python-version }} Code Quality
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13", "3.14", "3.15"]
+    env:
+      UV_PYTHON: ${{ matrix.python-version }}
 
     permissions:
       contents: read
@@ -30,7 +36,7 @@ jobs:
 
       - name: Install Python and dependencies
         run: |
-          uv python install 3.12
+          uv python install "$UV_PYTHON"
           uv sync --locked --extra dev
 
       - name: Lint with Ruff

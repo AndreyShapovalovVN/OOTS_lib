@@ -23,7 +23,7 @@ pip install "oots-lib[pdf]"     # + генерація PDF (WeasyPrint)
 pip install "oots-lib[dev]"     # + ruff, mypy, pytest
 ```
 
-Потрібен Python 3.12+ та доступний Redis.
+Потрібен Python 3.12+ та доступний Redis. Підтримуються Python 3.12, 3.13, 3.14 і 3.15.
 
 ## Змінні оточення
 
@@ -162,6 +162,14 @@ pip install -e ".[dev]"
 ruff check .
 mypy . --ignore-missing-imports
 pytest
+```
+
+CI перевіряє код і тести на Python 3.12–3.15. Для локальної перевірки Python 3.15:
+
+```bash
+uv python install 3.15
+uv sync --locked --extra dev --python 3.15
+uv run --python 3.15 pytest
 ```
 
 CI (`.github/workflows/ci-security-quality.yml`) додатково виконує Gitleaks (пошук
