@@ -85,6 +85,10 @@ await evidence.load_data_to_redis()
 `load_data_to_redis()` зберігає `Evidences` за ключем
 `oots:message:response:evidence:{message_id}` і, якщо preview не потрібен, кладе
 `message_id` до `QUEUE_OUTCOMING`.
+Якщо `IF_PREVIEW=true`, бібліотека перед збереженням доказів встановлює
+`oots:message:request:preview:{message_id}` у `true` і зберігає докази.
+За `IF_PREVIEW=false` прапори в Redis не змінюються.
+При цьому `EDM:ERR:0002` не створюється, а відправка очікує підтвердження preview.
 
 ### Виклик сервісу даних
 

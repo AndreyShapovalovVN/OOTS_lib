@@ -385,67 +385,60 @@ async def test_load_data_to_redis_requires_dataclass_evidence():
         await evidence.load_data_to_redis()
 
 
-async def test_load_data_to_redis_publishes_provider_preview_after_evidence(monkeypatch):
-    monkeypatch.setattr(make_evidence_module, "IF_PREVIEW", True)
-    monkeypatch.setenv("PREVIEW_URL", " https://preview.example/ ")
-    monkeypatch.setenv("QUEUE_OUTCOMING", "preview-queue")
-    redis = RedisSpy()
-    evidence = build(redis)
-    await evidence.transform_data()
-
-    async def push_to_queue(queue, message):
-        assert list(redis.saved) == [
-            KEYS.get_response_evidence("msg-1"),
-            KEYS.get_response_exp("msg-1"),
-        ]
-        redis.pushed.append((queue, message))
-
-    monkeypatch.setattr(redis, "push_to_queue", push_to_queue)
-    await evidence.load_data_to_redis()
-
-    assert redis.saved[KEYS.get_response_exp("msg-1")] == {
-        "exception": {
-            "code": "EDM:ERR:0002",
-            "message": "Постачальник доказу вимагає попереднього перегляду",
-            "detail": "Користувачу необхідно обрати потрібні докази та підтвердити їх передачу",
-            "preview_link": "https://preview.example/msg-1",
-        }
-    }
-    assert redis.pushed == [("preview-queue", "msg-1")]
-
-
-@pytest.mark.parametrize("preview_url", [None, "", "   ", " / "])
-async def test_load_data_to_redis_validates_preview_url_before_saving(monkeypatch, preview_url):
+@pytest.mark.parametrize("preview_location", [None, "https://receiver.example/preview"])
+@pytest.mark.parametrize("stored_preview", [None, False, True])
+@pytest.mark.parametrize("request_preview", [False, True])
+async def test_provider_preview_sets_redis_flag_without_exception(
+    monkeypatch, redis_wrapper, preview_location, stored_preview, request_preview
+):
     monkeypatch.setattr(make_evidence_module, "IF_PREVIEW", True)
     monkeypatch.delenv("PREVIEW_URL", raising=False)
-    monkeypatch.delenv("IS_TEST", raising=False)
-    if preview_url is not None:
-        monkeypatch.setenv("PREVIEW_URL", preview_url)
-    redis = RedisSpy()
-    evidence = build(redis)
+    preview_key = KEYS.get_request_preview("msg-1")
+    if stored_preview is not None:
+        await redis_wrapper.set_flag(preview_key, stored_preview)
+    evidence = build(redis_wrapper)
+    evidence.request.serialize = lambda **kwargs: {
+        "doc": {"PossibilityForPreview": request_preview, "PreviewLocation": preview_location}
+    }
+    evidence._request_content_type = "application/xml"
     await evidence.transform_data()
 
-    with pytest.raises(ValueError, match="PREVIEW_URL"):
-        await evidence.load_data_to_redis()
+    original_save = redis_wrapper.save_to_redis
 
-    assert redis.saved == {}
-    assert redis.pushed == []
+    async def save_after_flag_update(key, value):
+        assert await redis_wrapper.get_flag(preview_key) is True
+        await original_save(key, value)
+
+    monkeypatch.setattr(redis_wrapper, "save_to_redis", save_after_flag_update)
+    await evidence.load_data_to_redis()
+
+    assert await redis_wrapper.get_flag(preview_key) is True
+    saved = await redis_wrapper.get_from_redis(KEYS.get_response_evidence("msg-1"))
+    assert saved["preview"] is True
+    assert saved["evidences"]
+    assert await redis_wrapper.get_from_redis(KEYS.get_response_exp("msg-1")) is None
+    assert redis_wrapper._redis_client.queues == {}
 
 
 @pytest.mark.parametrize("request_preview", [False, True])
-async def test_load_data_to_redis_does_not_repeat_receiver_preview(monkeypatch, request_preview):
-    monkeypatch.setattr(make_evidence_module, "IF_PREVIEW", True)
-    monkeypatch.delenv("PREVIEW_URL", raising=False)
-    redis = RedisSpy()
-    evidence = build(redis, preview=request_preview)
-    if not request_preview:
-        evidence.request.serialize = lambda **kwargs: {
-            "doc": {"PossibilityForPreview": False, "PreviewLocation": "https://receiver.example/preview"}
-        }
-        evidence._request_content_type = "application/xml"
-    await evidence.transform_data()
+@pytest.mark.parametrize("stored_preview", [None, False, True])
+async def test_disabled_global_preview_leaves_flags_unchanged(
+    monkeypatch, redis_wrapper, request_preview, stored_preview
+):
+    monkeypatch.setattr(make_evidence_module, "IF_PREVIEW", False)
+    preview_key = KEYS.get_request_preview("msg-1")
+    if stored_preview is not None:
+        await redis_wrapper.set_flag(preview_key, stored_preview)
 
+    async def unexpected_flag_write(*args):
+        pytest.fail("IF_PREVIEW=False must not write flags")
+
+    monkeypatch.setattr(redis_wrapper, "set_flag", unexpected_flag_write)
+    evidence = build(redis_wrapper, preview=request_preview)
+    await evidence.transform_data()
     await evidence.load_data_to_redis()
 
-    assert list(redis.saved) == [KEYS.get_response_evidence("msg-1")]
-    assert redis.pushed == []
+    assert await redis_wrapper.get_from_redis(preview_key) is stored_preview
+    saved = await redis_wrapper.get_from_redis(KEYS.get_response_evidence("msg-1"))
+    assert saved["preview"] is request_preview
+    assert await redis_wrapper.get_from_redis(KEYS.get_response_exp("msg-1")) is None
